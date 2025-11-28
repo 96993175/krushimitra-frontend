@@ -11,6 +11,7 @@ export interface ChatMessage {
   content: string;
 }
 
+
 export type LLMMode = 'cloud' | 'local' | 'hybrid';
 
 export interface LLMResponse {
@@ -68,18 +69,19 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
     throw new Error('Cloud LLM API key not configured');
   }
   
-  // Build context-aware prompt
-  let systemPrompt = `You are KrushiAI — a smart and trusted farming helper. Give short, simple answers. Always start by addressing the user by name.`;
+  // Build simple, focused system prompt
+  let systemPrompt = `You are KrushiAI, a helpful farming assistant. 
+Answer in simple Hindi (Devanagari script). Keep answers short (2-3 sentences max).
+Be direct and practical and  Always start by addressing the user by name`;
   
+  // Add only essential user info
   if (userContext?.user_data) {
-    systemPrompt += `\n\nUser Information:\n`;
-    systemPrompt += `Name: ${userContext.user_data.user_name || 'Unknown'}\n`;
-    systemPrompt += `Language: ${userContext.user_data.user_language || 'hi'}\n`;
-    if (userContext.user_data.user_location) {
-      systemPrompt += `Location: ${userContext.user_data.user_location.address}\n`;
-    }
-    if (userContext.user_data.user_weather) {
-      systemPrompt += `Weather: ${userContext.user_data.user_weather.condition}, ${userContext.user_data.user_weather.temperature}°C\n`;
+    const userName = userContext.user_data.user_name || 'किसान';
+    const location = userContext.user_data.user_location?.address;
+    
+    systemPrompt += `\n\nUser: ${userName}`;
+    if (location) {
+      systemPrompt += `\nLocation: ${location}`;
     }
   }
   
@@ -102,36 +104,23 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
  * Query local Ollama only
  */
 async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerator<string> {
-  // Build context-aware prompt with clear instructions
-  let fullPrompt = `You are KrushiAI — a smart and trusted farming helper. Give short, simple. always start answer by taking name of that user at first`;
+  // Build simple, clear prompt
+  let fullPrompt = `You are KrushiAI, a farming assistant. Answer in simple Hindi (Devanagari script). Keep it short and practical and Always start by addressing the user by name`;
   
-  // Add user context if available
-  if (userContext) {
-    fullPrompt += '\n\n=== USER CONTEXT (Use this to answer questions about the user) ===\n';
-    if (userContext.user_data) {
-      fullPrompt += `User Name: ${userContext.user_data.user_name || 'Unknown'}\n`;
-      fullPrompt += `Phone: ${userContext.user_data.user_phone || 'Not provided'}\n`;
-      fullPrompt += `Language: ${userContext.user_data.user_language || 'hi'}\n`;
-      if (userContext.user_data.user_location) {
-        fullPrompt += `Location: ${userContext.user_data.user_location.address}\n`;
-      }
-      if (userContext.user_data.user_weather) {
-        fullPrompt += `Current Weather: ${userContext.user_data.user_weather.condition}, ${userContext.user_data.user_weather.temperature}°C\n`;
-      }
-    }
+  // Add only essential context
+  if (userContext?.user_data) {
+    const userName = userContext.user_data.user_name || 'किसान';
+    const location = userContext.user_data.user_location?.address;
     
-    // Add conversation history
-    if (userContext.last_5_conversations && userContext.last_5_conversations.length > 0) {
-      fullPrompt += '\n=== RECENT CONVERSATIONS ===\n';
-      userContext.last_5_conversations.forEach((conv: any, idx: number) => {
-        fullPrompt += `${idx + 1}. [${conv.role}]: ${conv.message}\n`;
-      });
+    fullPrompt += `\n\nUser: ${userName}`;
+    if (location) {
+      fullPrompt += `\nLocation: ${location}`;
     }
   }
   
-  fullPrompt += `\n=== USER QUESTION ===\n${prompt}\n\n=== YOUR ANSWER (in Hindi) ===\n`;
+  fullPrompt += `\n\nQuestion: ${prompt}\n\nAnswer:`;
   
-  console.log('📝 Full LLM Prompt:', fullPrompt.substring(0, 300) + '...');
+  console.log('📝 Simplified Prompt:', fullPrompt.substring(0, 200) + '...');
   yield* queryOllamaStream(fullPrompt);
 }
 
