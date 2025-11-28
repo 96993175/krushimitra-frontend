@@ -93,7 +93,13 @@ export function getAPIConfig(): APIConfig {
     return {
       environment: env,
       llm: {
-        primary: CLOUD_LLM_ENDPOINTS.groq, // Change based on preference
+        primary: {
+          name: 'Ollama Cloud',
+          url: process.env.EXPO_PUBLIC_OLLAMA_SERVER || 'http://localhost:11434/api/generate',
+          type: 'cloud',
+          priority: 1
+        },
+        fallback: CLOUD_LLM_ENDPOINTS.groq, // Fallback if needed
       },
       tts: {
         primary: {
