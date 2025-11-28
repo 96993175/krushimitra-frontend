@@ -69,21 +69,31 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
     throw new Error('Cloud LLM API key not configured');
   }
   
-  // Build simple, focused system prompt
-  let systemPrompt = `You are KrushiAI, a helpful farming assistant. 
-Answer in simple Hindi (Devanagari script). Keep answers short (2-3 sentences max).
-Be direct and practical and  Always start by addressing the user by name`;
+  // Build user context data
+  const userName = userContext?.user_data?.user_name || 'किसान';
+  const userLocation = userContext?.user_data?.user_location?.address || 'अज्ञात स्थान';
+  const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
   
-  // Add only essential user info
-  if (userContext?.user_data) {
-    const userName = userContext.user_data.user_name || 'किसान';
-    const location = userContext.user_data.user_location?.address;
-    
-    systemPrompt += `\n\nUser: ${userName}`;
-    if (location) {
-      systemPrompt += `\nLocation: ${location}`;
-    }
-  }
+  // Build prompt with the requested format
+  const systemPrompt = `You are KrushiAI, a helpful farming assistant.
+
+Below is the user data. Use this data only for answering.
+Do not change the user's name. 
+Do not add any new names.
+start replay with users name
+Reply only in simple Hindi (Devanagari script).
+
+--- USER DATA ---
+Name: ${userName}
+Location: ${userLocation}
+Current Weather: ${currentWeather}
+------------------
+
+--- USER QUESTION ---
+${prompt}
+---------------------
+
+Your Answer (in Hindi):`;
   
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
@@ -104,23 +114,33 @@ Be direct and practical and  Always start by addressing the user by name`;
  * Query local Ollama only
  */
 async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerator<string> {
-  // Build simple, clear prompt
-  let fullPrompt = `You are KrushiAI, a farming assistant. Answer in simple Hindi (Devanagari script). Keep it short and practical and Always start by addressing the user by name`;
+  // Build user context data
+  const userName = userContext?.user_data?.user_name || 'किसान';
+  const userLocation = userContext?.user_data?.user_location?.address || 'अज्ञात स्थान';
+  const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
   
-  // Add only essential context
-  if (userContext?.user_data) {
-    const userName = userContext.user_data.user_name || 'किसान';
-    const location = userContext.user_data.user_location?.address;
-    
-    fullPrompt += `\n\nUser: ${userName}`;
-    if (location) {
-      fullPrompt += `\nLocation: ${location}`;
-    }
-  }
+  // Build prompt with the requested format
+  const fullPrompt = `You are KrushiAI, a helpful farming assistant.
+
+Below is the user data. Use this data only for answering.
+Do not change the user's name. 
+Do not add any new names.
+start replay with users name
+Reply only in simple Hindi (Devanagari script).
+
+--- USER DATA ---
+Name: ${userName}
+Location: ${userLocation}
+Current Weather: ${currentWeather}
+------------------
+
+--- USER QUESTION ---
+${prompt}
+---------------------
+
+Your Answer (in Hindi):`;
   
-  fullPrompt += `\n\nQuestion: ${prompt}\n\nAnswer:`;
-  
-  console.log('📝 Simplified Prompt:', fullPrompt.substring(0, 200) + '...');
+  console.log('📝 Formatted Prompt:', fullPrompt.substring(0, 200) + '...');
   yield* queryOllamaStream(fullPrompt);
 }
 

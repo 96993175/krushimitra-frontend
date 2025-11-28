@@ -449,14 +449,6 @@ export default function HomeScreen() {
       ])
     );
 
-    const rotateLoop = Animated.loop(
-      Animated.timing(rotateAnimation, {
-        toValue: 1,
-        duration: 20000,
-        useNativeDriver: true,
-      })
-    );
-
     const orbitalLoop = Animated.loop(
       Animated.timing(orbitalAnimation, {
         toValue: 1,
@@ -513,7 +505,6 @@ export default function HomeScreen() {
     );
 
     glowLoop.start();
-    rotateLoop.start();
     orbitalLoop.start();
     scaleLoop.start();
     weatherLoop.start();
@@ -529,7 +520,6 @@ export default function HomeScreen() {
 
     return () => {
       glowLoop.stop();
-      rotateLoop.stop();
       orbitalLoop.stop();
       scaleLoop.stop();
       weatherLoop.stop();
@@ -1762,12 +1752,6 @@ export default function HomeScreen() {
                 transform: [
                   {
                     scale: audioLevel
-                  },
-                  {
-                    rotate: rotateAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ['0deg', '360deg'],
-                    })
                   }
                 ]
               }

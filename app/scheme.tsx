@@ -124,6 +124,9 @@ export default function GovernmentSchemesScreen() {
     new Animated.ValueXY({ x: 350, y: 300 }),
   ]).current;
 
+  // Store pulse animation loop ref to start it later
+  const pulseAnimationLoop = useRef<any>(null);
+
   useEffect(() => {
     loadUserData();
     
@@ -137,8 +140,9 @@ export default function GovernmentSchemesScreen() {
       }),
     ]).start();
 
-    // Gentle pulse effect
-    Animated.loop(
+    // Don't start pulse animation immediately - will be triggered by TTS
+    // Store the animation loop for later use
+    pulseAnimationLoop.current = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnimation, {
           toValue: 1.05,
@@ -151,7 +155,7 @@ export default function GovernmentSchemesScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
 
     // Floating animation for particles
     Animated.loop(
@@ -337,6 +341,13 @@ export default function GovernmentSchemesScreen() {
     
     // Start typing animation without device TTS
     typingAnimation.setValue(0);
+    
+    // Start pulse animation 1 second after TTS starts speaking
+    setTimeout(() => {
+      if (pulseAnimationLoop.current) {
+        pulseAnimationLoop.current.start();
+      }
+    }, 1000);
     
     Animated.timing(typingAnimation, {
       toValue: typingText.length,
