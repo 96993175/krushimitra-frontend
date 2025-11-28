@@ -1235,66 +1235,70 @@ export default function HomeScreen() {
   }, [userData, weatherData, userAddress, hasSpokenWelcome, isSpeaking, isProcessing, speakWelcomeMessage]);
   */
 
+  const preloadTtsAudio = useCallback(async (text: string) => {
+    // Preload audio buffer immediately so playback can start without UI delay
+    await serverManager.initialize();
+    const ttsBaseUrl = serverManager.getTTSEndpoint();
+
+    if (!ttsBaseUrl) {
+      throw new Error('TTS service not available');
+    }
+
+    await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
+
+    const ttsUrl = `${ttsBaseUrl}?lang=hi&text=${encodeURIComponent(text)}`;
+    console.log('Preloading TTS audio:', ttsUrl);
+
+    const response = await fetch(ttsUrl, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'User-Agent': 'KrushiMitra-App'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`TTS request failed: ${response.status}`);
+    }
+
+    const blob = await response.blob();
+    const reader = new FileReader();
+
+    const audioUri = await new Promise<string>((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
+    const { sound } = await Audio.Sound.createAsync({ uri: audioUri }, { shouldPlay: false });
+    await sound.setPositionAsync(0);
+    return sound;
+  }, []);
+
   const speakResponse = async (text: string, autoStartListening: boolean = false) => {
     // SEQUENTIAL PROCESSING: Ensure we are not listening while speaking
     stopListening();
     setIsSpeaking(true);
     setIsProcessing(true); // Block new inputs during TTS
-    // Start a more dynamic animation when speaking begins
-    startSpeakingAnimation();
+
+    let sound: Audio.Sound | null = null;
 
     try {
-      // Get TTS endpoint from server manager
-      await serverManager.initialize();
-      const ttsBaseUrl = serverManager.getTTSEndpoint();
-      
-      if (!ttsBaseUrl) {
-        throw new Error('TTS service not available');
+      // Preload the audio buffer as soon as text is available
+      sound = await preloadTtsAudio(text);
+
+      if (!sound) {
+        throw new Error('Failed to prepare TTS audio');
       }
 
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false });
-
-      const ttsUrl = `${ttsBaseUrl}?lang=hi&text=${encodeURIComponent(text)}`;
-      console.log('Calling TTS endpoint:', ttsUrl);
-
-      // Download audio file first with ngrok bypass header
-      const response = await fetch(ttsUrl, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'User-Agent': 'KrushiMitra-App'
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error(`TTS request failed: ${response.status}`);
-      }
-
-      // Get audio as blob and create local URI
-      const blob = await response.blob();
-      const reader = new FileReader();
-      
-      await new Promise((resolve, reject) => {
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(blob);
-      });
-
-      const audioUri = reader.result as string;
-      const { sound } = await Audio.Sound.createAsync({ uri: audioUri }, { shouldPlay: false });
-      await sound.setPositionAsync(0);
-      await sound.playAsync();
-
-      // Handle playback completion - SEQUENTIAL: Only allow next input after TTS finishes
       sound.setOnPlaybackStatusUpdate((status) => {
         if ('didJustFinish' in status && status.didJustFinish) {
-          sound.unloadAsync();
+          sound?.unloadAsync();
           stopSpeakingAnimation();
           setIsSpeaking(false);
           setIsProcessing(false); // Release processing lock after TTS completion
 
           console.log('TTS completed - ready for next voice input');
 
-          // Auto-start listening for next input only if explicitly requested AND TTS completed
           if (autoStartListening) {
             setTimeout(() => {
               if (!isSpeaking && !isProcessing) {
@@ -1319,12 +1323,20 @@ export default function HomeScreen() {
           }
         }
       });
+
+      // Kick off orb animation only once audio buffer is ready, then play immediately
+      startSpeakingAnimation();
+      await sound.playAsync();
     } catch (error) {
       console.error('TTS error:', error instanceof Error ? error.message : String(error));
 
       stopSpeakingAnimation();
       setIsSpeaking(false);
       setIsProcessing(false);
+
+      if (sound) {
+        sound.unloadAsync();
+      }
 
       if (autoStartListening) {
         setTimeout(() => {
