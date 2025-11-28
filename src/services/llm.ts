@@ -4,16 +4,14 @@
  */
 
 import { queryOllamaStream } from '../utils/ollama';
-// Cloud imports removed – enforcing local-only mode
+import { queryCloudLLMStream, type CloudLLMConfig } from './cloudLLM';
 
-// Local-only design: we keep a minimal ChatMessage type for compatibility
-// with existing call signatures, but ignore it internally.
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
-export type LLMMode = 'local'; // Cloud & hybrid disabled
+export type LLMMode = 'cloud' | 'local' | 'hybrid';
 
 export interface LLMResponse {
   text: string;
@@ -26,8 +24,8 @@ export interface LLMResponse {
  * Get current LLM mode from environment
  */
 function getLLMMode(): LLMMode {
-  // Force local-only regardless of environment configuration.
-  return 'local';
+  const mode = process.env.EXPO_PUBLIC_LLM_MODE || 'hybrid';
+  return mode as LLMMode;
 }
 
 /**
@@ -38,16 +36,67 @@ export async function* queryLLMStream(
   _conversationHistory?: ChatMessage[],
   userContext?: any
 ): AsyncGenerator<string> {
-  // Local-only streaming; no cloud logic executed.
-  console.log('🤖 LLM Mode: local (cloud disabled)');
+  const mode = getLLMMode();
+  console.log('🤖 LLM Mode:', mode);
   console.log('📋 User Context:', userContext ? 'Included' : 'Not provided');
+  
+  // Try cloud first if available
+  if (mode === 'cloud' || mode === 'hybrid') {
+    try {
+      yield* queryCloudOnly(prompt, userContext);
+      return;
+    } catch (error) {
+      console.warn('☁️ Cloud LLM failed, trying local...', error);
+      if (mode === 'cloud') {
+        throw error; // Don't fallback if cloud-only mode
+      }
+    }
+  }
+  
+  // Fallback to local
   yield* queryLocalOnly(prompt, userContext);
 }
 
 /**
  * Query cloud LLM only
  */
-// Cloud querying removed – intentionally disabled for strict local usage.
+async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerator<string> {
+  const apiKey = process.env.EXPO_PUBLIC_CLOUD_LLM_API_KEY;
+  const provider = (process.env.EXPO_PUBLIC_CLOUD_LLM_PROVIDER || 'groq') as any;
+  
+  if (!apiKey) {
+    throw new Error('Cloud LLM API key not configured');
+  }
+  
+  // Build context-aware prompt
+  let systemPrompt = `You are KrushiAI — a smart and trusted farming helper. Give short, simple answers. Always start by addressing the user by name.`;
+  
+  if (userContext?.user_data) {
+    systemPrompt += `\n\nUser Information:\n`;
+    systemPrompt += `Name: ${userContext.user_data.user_name || 'Unknown'}\n`;
+    systemPrompt += `Language: ${userContext.user_data.user_language || 'hi'}\n`;
+    if (userContext.user_data.user_location) {
+      systemPrompt += `Location: ${userContext.user_data.user_location.address}\n`;
+    }
+    if (userContext.user_data.user_weather) {
+      systemPrompt += `Weather: ${userContext.user_data.user_weather.condition}, ${userContext.user_data.user_weather.temperature}°C\n`;
+    }
+  }
+  
+  const messages: ChatMessage[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: prompt }
+  ];
+  
+  const config: CloudLLMConfig = {
+    provider,
+    apiKey,
+    model: process.env.EXPO_PUBLIC_CLOUD_LLM_MODEL || 
+           (provider === 'groq' ? 'llama3-8b-8192' : 'meta-llama/llama-3-8b-instruct')
+  };
+  
+  yield* queryCloudLLMStream(messages, config);
+}
 
 /**
  * Query local Ollama only
@@ -91,20 +140,22 @@ async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerato
  */
 export async function queryLLM(prompt: string): Promise<LLMResponse> {
   let fullResponse = '';
+  const mode = getLLMMode();
+  
   try {
     for await (const chunk of queryLLMStream(prompt)) {
       fullResponse += chunk;
     }
     return {
       text: fullResponse,
-      provider: 'local',
-      model: 'llama3.2:1b'
+      provider: mode === 'local' ? 'local' : 'cloud',
+      model: mode === 'local' ? 'llama3.2:1b' : 'llama3-8b'
     };
   } catch (error) {
-    console.error('Local LLM error (cloud disabled):', error);
+    console.error('LLM error:', error);
     return {
       text: '',
-      provider: 'local',
+      provider: mode === 'local' ? 'local' : 'cloud',
       model: 'error',
       error: error instanceof Error ? error.message : 'Unknown error'
     };
