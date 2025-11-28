@@ -78,8 +78,6 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
   const systemPrompt = `You are KrushiAI, a helpful farming assistant.
 
 Below is the user data. Use this data only for answering.
-Do not change the user's name. 
-Do not add any new names.
 start replay with users name
 Reply only in simple Hindi (Devanagari script).
 
@@ -123,8 +121,6 @@ async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerato
   const fullPrompt = `You are KrushiAI, a helpful farming assistant.
 
 Below is the user data. Use this data only for answering.
-Do not change the user's name. 
-Do not add any new names.
 start replay with users name
 Reply only in simple Hindi (Devanagari script).
 
