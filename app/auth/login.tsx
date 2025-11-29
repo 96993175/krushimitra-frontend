@@ -33,6 +33,7 @@ export default function LoginScreen() {
   const [otpLoading, setOtpLoading] = useState(false);
   const [otpTimer, setOtpTimer] = useState(0);
   const [otpSentTime, setOtpSentTime] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(0.8)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
@@ -152,10 +153,11 @@ export default function LoginScreen() {
   const handleSendOtp = async () => {
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !normalizedEmail.includes('@')) {
-      Alert.alert(t('error'), 'Please enter a valid email address');
+      setEmailError('Please enter a valid email address');
       return;
     }
     setEmail(normalizedEmail);
+    setEmailError(null); // Clear any previous errors
 
     setOtpLoading(true);
     
@@ -171,17 +173,10 @@ export default function LoginScreen() {
       
       const checkData = await checkResponse.json();
       
-      // If user doesn't exist, show error immediately without sending OTP
+      // If user doesn't exist, show error inline without sending OTP
       if (!checkResponse.ok || !checkData.exists) {
         setOtpLoading(false);
-        Alert.alert(
-          '❌ Email Not Registered', 
-          `The email address:\n\n${normalizedEmail}\n\nis not registered with KrushiMitra.\n\nPlease sign up to create a new account.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: '✨ Sign Up', onPress: handleSignUp }
-          ]
-        );
+        setEmailError('This email is not registered. Please sign up first.');
         return;
       }
       
@@ -205,11 +200,11 @@ export default function LoginScreen() {
           [{ text: 'OK', style: 'default' }]
         );
       } else {
-        Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
+        setEmailError(data.error?.message || 'Failed to send OTP');
       }
     } catch (error) {
       console.error('Error sending OTP:', error);
-      Alert.alert(t('error'), 'Network error. Please try again.');
+      setEmailError('Network error. Please try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -393,14 +388,20 @@ export default function LoginScreen() {
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>EMAIL</Text>
                   <View style={isMobile ? styles.phoneInputColumn : styles.phoneInputRow}>
-                    <View style={isMobile ? styles.phoneInputContainerFullWidth : styles.phoneInputContainer}>
+                    <View style={[
+                      isMobile ? styles.phoneInputContainerFullWidth : styles.phoneInputContainer,
+                      emailError ? styles.inputContainerError : null
+                    ]}>
                       <View style={styles.inputIconContainer}>
-                        <User size={20} color="#4CAF50" />
+                        <User size={20} color={emailError ? "#F44336" : "#4CAF50"} />
                       </View>
                       <TextInput
                         style={styles.input}
                         value={email}
-                        onChangeText={setEmail}
+                        onChangeText={(text) => {
+                          setEmail(text);
+                          if (emailError) setEmailError(null); // Clear error on input change
+                        }}
                         placeholder="Enter your email"
                         placeholderTextColor="#999"
                         keyboardType="email-address"
@@ -422,6 +423,19 @@ export default function LoginScreen() {
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  
+                  {/* Email Error Message */}
+                  {emailError && (
+                    <View style={styles.errorContainer}>
+                      <Text style={styles.errorText}>❌ {emailError}</Text>
+                      <TouchableOpacity 
+                        onPress={() => router.push('/auth/signup')}
+                        style={styles.signupLink}
+                      >
+                        <Text style={styles.signupLinkText}>Sign up now →</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
                 
                 {/* OTP Input */}
@@ -736,6 +750,35 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+  },
+  inputContainerError: {
+    borderColor: '#F44336',
+    borderWidth: 2,
+    backgroundColor: '#FFEBEE',
+  },
+  errorContainer: {
+    marginTop: 8,
+    padding: 12,
+    backgroundColor: '#FFEBEE',
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#D32F2F',
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    marginBottom: 8,
+  },
+  signupLink: {
+    alignSelf: 'flex-start',
+  },
+  signupLinkText: {
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   inputIconContainer: {
     marginRight: 12,

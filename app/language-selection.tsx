@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   ScrollView,
   Alert,
   useWindowDimensions,
+  Animated,
+  Image,
+  Platform,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -43,6 +46,7 @@ export default function LanguageSelectionScreen() {
   const isMobile = width < 768; // Consider screens narrower than 768px as mobile
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
+  const pulseAnimation = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     // Set current language as selected
@@ -50,6 +54,22 @@ export default function LanguageSelectionScreen() {
     if (currentLang) {
       setSelectedLanguage(currentLang);
     }
+
+    // Start pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnimation, {
+          toValue: 1.05,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnimation, {
+          toValue: 1,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
   }, [i18n.language]);
 
   const handleLanguageSelect = async (language: Language) => {
@@ -102,9 +122,41 @@ export default function LanguageSelectionScreen() {
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.welcomeSection}>
-          <View style={styles.iconContainer}>
-            <Languages size={48} color="#4CAF50" />
-          </View>
+          {/* Animated Logo from Splash Screen */}
+          <Animated.View style={[
+            styles.logoCircle,
+            {
+              transform: [{ scale: pulseAnimation }],
+            }
+          ]}>
+            <LinearGradient
+              colors={['#4CAF50', '#2E7D32', '#4CAF50']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoGradient}
+            >
+              <View style={styles.logoWrapper}>
+                <Image 
+                  source={require('./logoai.jpg')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </View>
+            </LinearGradient>
+            
+            {/* Glow Effect */}
+            <Animated.View style={[
+              styles.glowEffect,
+              {
+                transform: [{ scale: pulseAnimation }],
+                opacity: pulseAnimation.interpolate({
+                  inputRange: [1, 1.05],
+                  outputRange: [0.3, 0.6]
+                })
+              }
+            ]} />
+          </Animated.View>
+
           <Text style={styles.welcomeTitle}>{t('welcomeToKrushiMitra')}</Text>
           <Text style={styles.welcomeSubtitle}>{t('yourFarmingAssistant')}</Text>
         </View>
@@ -278,14 +330,57 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 40,
   },
-  iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+  logoCircle: {
+    width: 180,
+    height: 180,
+    borderRadius: 90,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    shadowColor: '#4CAF50',
+    shadowOffset: {
+      width: 0,
+      height: 12,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  logoGradient: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 90,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoWrapper: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#2E7D32',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  logoImage: {
+    width: 100,
+    height: 100,
+  },
+  glowEffect: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 90,
+    backgroundColor: '#4CAF50',
+    opacity: 0.4,
+    zIndex: -1,
   },
   welcomeTitle: {
     fontSize: 24,
