@@ -356,6 +356,13 @@ export default function HomeScreen() {
         // Attach ALL event handlers HERE - this ensures they work on mobile browsers too
 
         recognition.onresult = (event: any) => {
+          console.log('🎤 onresult triggered:', {
+            resultsLength: event.results?.length,
+            isFinal: event.results?.[0]?.isFinal,
+            transcript: event.results?.[0]?.[0]?.transcript,
+            confidence: event.results?.[0]?.[0]?.confidence
+          });
+          
           // SEQUENTIAL VOICE PROCESSING: Only accept input when completely ready
           // STOP listening immediately when system is busy to prevent audio capture
           if (isSpeaking || isProcessing) {
@@ -369,16 +376,18 @@ export default function HomeScreen() {
             const transcript = alt?.transcript ?? '';
             const confidence = typeof alt?.confidence === 'number' ? alt.confidence : undefined;
 
+            console.log('🔍 Processing result:', { transcript, confidence, isFinal: event.results[0].isFinal });
+
             // ONLY process final results with good recognition
             if (event.results[0].isFinal) {
               setIsListening(false);
 
               // Enhanced speech recognition validation
               if (isValidSpeechInput(transcript, confidence)) {
-                console.log('Valid speech recognized:', { transcript, confidence });
+                console.log('✅ Valid speech recognized:', { transcript, confidence });
                 handleVoiceInput(transcript, confidence);
               } else {
-                console.log('Invalid speech ignored:', { transcript, confidence });
+                console.log('❌ Invalid speech ignored:', { transcript, confidence });
                 // Auto-restart listening for next valid input
                 setTimeout(() => {
                   if (!isSpeaking && !isProcessing) {
@@ -386,25 +395,35 @@ export default function HomeScreen() {
                   }
                 }, 1000);
               }
+            } else {
+              console.log('⏳ Interim result (not final), waiting...');
             }
           }, 500);
         };
 
         recognition.onerror = (event: any) => {
-          console.error('Speech recognition error', event.error);
+          console.error('❌ Speech recognition error:', {
+            error: event.error,
+            message: event.message,
+            timestamp: new Date().toISOString()
+          });
           setIsListening(false);
+          
           // Attempt a gentle auto-retry on transient errors ONLY when system is not busy
           if (event?.error === 'network' || event?.error === 'no-speech' || event?.error === 'audio-capture') {
+            console.log('⚠️ Transient error, will retry in 1.5s');
             if (errorRestartTimeoutRef.current) {
               clearTimeout(errorRestartTimeoutRef.current);
             }
             errorRestartTimeoutRef.current = setTimeout(() => {
               if (Platform.OS === 'web' && !isSpeaking && !isProcessing) {
+                console.log('🔄 Auto-retrying after transient error...');
                 startListening();
               }
             }, 1500) as unknown as number;
           } else {
-            Alert.alert('Speech Recognition Error', 'There was an error with speech recognition. Please try again.');
+            console.error('🚫 Non-transient error, showing alert');
+            Alert.alert('Speech Recognition Error', `Error: ${event.error}. Please try again.`);
           }
         };
 
@@ -414,8 +433,32 @@ export default function HomeScreen() {
         };
         
         recognition.onstart = () => {
-          console.log('🎧 Recognition started');
+          console.log('🎧 Recognition started - listening for speech...');
           setIsListening(true);
+        };
+        
+        recognition.onaudiostart = () => {
+          console.log('🔊 Audio capture started - microphone is active');
+        };
+        
+        recognition.onaudioend = () => {
+          console.log('🔇 Audio capture ended');
+        };
+        
+        recognition.onsoundstart = () => {
+          console.log('📢 Sound detected by microphone');
+        };
+        
+        recognition.onsoundend = () => {
+          console.log('🔕 Sound stopped');
+        };
+        
+        recognition.onspeechstart = () => {
+          console.log('🗣️ Speech detected!');
+        };
+        
+        recognition.onspeechend = () => {
+          console.log('🤐 Speech ended');
         };
         
         // NOW assign to ref after all handlers are attached
