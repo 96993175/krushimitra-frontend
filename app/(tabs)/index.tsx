@@ -1092,6 +1092,13 @@ export default function HomeScreen() {
   };
 
   const startBrowserListening = () => {
+    console.log('🎤 startBrowserListening called:', {
+      hasRecognitionRef: !!recognitionRef.current,
+      isSpeaking,
+      isProcessing,
+      platform: Platform.OS
+    });
+    
     // Ensure speech recognition is completely stopped before starting new session
     if (recognitionRef.current?.abort) {
       recognitionRef.current.abort();
@@ -1680,6 +1687,15 @@ export default function HomeScreen() {
     const hasWebSpeech = typeof window !== 'undefined' && 
                         ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
     
+    console.log('🎤 Voice toggle clicked:', {
+      platform: Platform.OS,
+      hasWindow: typeof window !== 'undefined',
+      hasWebkitSpeechRecognition: typeof window !== 'undefined' && 'webkitSpeechRecognition' in window,
+      hasSpeechRecognition: typeof window !== 'undefined' && 'SpeechRecognition' in window,
+      hasWebSpeech,
+      recognitionRefExists: !!recognitionRef.current
+    });
+    
     if (!hasWebSpeech) {
       Alert.alert(
         'Voice Feature', 
@@ -1690,6 +1706,23 @@ export default function HomeScreen() {
         ]
       );
       return;
+    }
+    
+    // If recognition not initialized yet, try to initialize it
+    if (!recognitionRef.current) {
+      console.warn('⚠️ Recognition not initialized, attempting to initialize...');
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition();
+        recognitionRef.current.continuous = false;
+        recognitionRef.current.interimResults = false;
+        recognitionRef.current.lang = 'en-IN';
+        console.log('✅ Recognition initialized successfully');
+      } else {
+        console.error('❌ Failed to initialize speech recognition');
+        Alert.alert('Error', 'Could not initialize voice recognition. Please refresh the page.');
+        return;
+      }
     }
     
     // Speak welcome message on first interaction (browser autoplay policy requirement)
