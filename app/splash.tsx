@@ -50,7 +50,8 @@ export default function SplashScreen() {
   useEffect(() => {
     if (transitioning) {
       const shouldAutoLogin = String(params?.autologin || '').toLowerCase() === 'true';
-      replaceWithTransition(shouldAutoLogin ? '/(tabs)' : '/intro1');
+      // Skip intro pages - go directly to language selection or main app
+      replaceWithTransition(shouldAutoLogin ? '/(tabs)' : '/language-selection');
     }
   }, [transitioning, params]);
 
