@@ -1568,11 +1568,29 @@ export default function HomeScreen() {
       try {
         let finalResponse = '';
 
+        // Ensure userData is loaded (re-fetch if null)
+        let currentUserData = userData;
+        if (!currentUserData) {
+          console.log('⚠️ userData is null, re-fetching from AsyncStorage...');
+          try {
+            const data = await AsyncStorage.getItem('userData');
+            if (data) {
+              currentUserData = JSON.parse(data);
+              setUserData(currentUserData);
+              console.log('✅ Re-loaded userData:', JSON.stringify(currentUserData, null, 2));
+            } else {
+              console.warn('⚠️ No userData in AsyncStorage');
+            }
+          } catch (err) {
+            console.error('❌ Error re-fetching userData:', err);
+          }
+        }
+
         // Use actual user's name from userData - check multiple possible fields
-        const actualUserName = userData?.name || 
-                              userData?.farmerName || 
-                              userData?.profile?.name || 
-                              (userData?.email ? userData.email.split('@')[0] : null);
+        const actualUserName = currentUserData?.name || 
+                              currentUserData?.farmerName || 
+                              currentUserData?.profile?.name || 
+                              (currentUserData?.email ? currentUserData.email.split('@')[0] : null);
         
         const userContextForLLM = {
           user_data: {
@@ -1580,9 +1598,9 @@ export default function HomeScreen() {
           }
         };
         console.log('📋 User name loaded for AI Orb:', userContextForLLM.user_data.user_name);
-        console.log('🔍 Debug - userData:', userData);
-        console.log('🔍 Debug - userData.name:', userData?.name);
-        console.log('🔍 Debug - userData.farmerName:', userData?.farmerName);
+        console.log('🔍 Debug - userData:', currentUserData);
+        console.log('🔍 Debug - userData.name:', currentUserData?.name);
+        console.log('🔍 Debug - userData.farmerName:', currentUserData?.farmerName);
         console.log('🔍 Debug - displayName:', displayName);
 
         // SEQUENTIAL PROCESSING: Get complete response first, then speak with Niraj voice
