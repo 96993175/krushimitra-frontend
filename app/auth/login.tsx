@@ -165,22 +165,38 @@ export default function LoginScreen() {
       const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
       
       // First, check if user exists before sending OTP
-      const checkResponse = await fetch(`${BACKEND_URL}/auth/check-user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail })
-      });
+      let userExists = true; // Default to true for backward compatibility
       
-      const checkData = await checkResponse.json();
+      try {
+        const checkResponse = await fetch(`${BACKEND_URL}/auth/check-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: normalizedEmail })
+        });
+        
+        if (checkResponse.ok) {
+          const checkData = await checkResponse.json();
+          console.log('🔍 User check response:', checkData);
+          userExists = checkData.exists === true;
+        } else {
+          // If endpoint doesn't exist (404) or other error, skip the check
+          console.log('⚠️ User check endpoint not available, skipping pre-check');
+          userExists = true;
+        }
+      } catch (checkError) {
+        // If check-user endpoint doesn't exist, skip the validation
+        console.log('⚠️ User check failed, proceeding anyway:', checkError);
+        userExists = true;
+      }
       
       // If user doesn't exist, show error inline without sending OTP
-      if (!checkResponse.ok || !checkData.exists) {
+      if (!userExists) {
         setOtpLoading(false);
         setEmailError('This email is not registered. Please sign up first.');
         return;
       }
       
-      // User exists, proceed to send OTP
+      // User exists (or check was skipped), proceed to send OTP
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
