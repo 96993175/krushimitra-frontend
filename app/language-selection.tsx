@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -38,6 +39,8 @@ const languages = [
 export default function LanguageSelectionScreen() {
   const { t, i18n } = useTranslation();
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768; // Consider screens narrower than 768px as mobile
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [selectedLanguage, setSelectedLanguage] = useState(languages[0]);
 
@@ -112,66 +115,106 @@ export default function LanguageSelectionScreen() {
             ऐप के लिए अपनी पसंदीदा भाषा चुनें
           </Text>
 
-          {/* Google Translate Style Dropdown */}
-          <View style={styles.dropdownContainer}>
-            <TouchableOpacity
-              style={styles.dropdownButton}
-              onPress={() => setIsDropdownOpen(!isDropdownOpen)}
-            >
-              <View style={styles.dropdownContent}>
-                <Text style={styles.flagText}>{selectedLanguage.flag}</Text>
-                <View style={styles.languageInfo}>
-                  <Text style={styles.languageName}>{selectedLanguage.nativeName}</Text>
-                  <Text style={styles.languageCode}>{selectedLanguage.name}</Text>
-                </View>
-              </View>
-              <ChevronDown 
-                size={20} 
-                color="#666" 
-                style={[
-                  styles.chevron,
-                  isDropdownOpen && styles.chevronRotated
-                ]} 
-              />
-            </TouchableOpacity>
-
-            {/* Dropdown Options */}
-            {isDropdownOpen && (
-              <View style={styles.dropdownOptions}>
-                {languages.map((language) => (
-                  <TouchableOpacity
-                    key={language.code}
-                    style={[
-                      styles.dropdownOption,
-                      selectedLanguage.code === language.code && styles.selectedOption
-                    ]}
-                    onPress={() => handleLanguageSelect(language)}
-                  >
-                    <View style={styles.optionContent}>
-                      <Text style={styles.optionFlag}>{language.flag}</Text>
-                      <View style={styles.optionInfo}>
-                        <Text style={[
-                          styles.optionName,
-                          selectedLanguage.code === language.code && styles.selectedOptionText
-                        ]}>
-                          {language.nativeName}
-                        </Text>
-                        <Text style={[
-                          styles.optionCode,
-                          selectedLanguage.code === language.code && styles.selectedOptionText
-                        ]}>
-                          {language.name}
-                        </Text>
-                      </View>
+          {/* Mobile: Show all languages as cards, Desktop: Dropdown */}
+          {isMobile ? (
+            // Mobile: Card List View
+            <View style={styles.languageCardsContainer}>
+              {languages.map((language) => (
+                <TouchableOpacity
+                  key={language.code}
+                  style={[
+                    styles.languageCard,
+                    selectedLanguage.code === language.code && styles.selectedCard
+                  ]}
+                  onPress={() => handleLanguageSelect(language)}
+                >
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardFlag}>{language.flag}</Text>
+                    <View style={styles.cardInfo}>
+                      <Text style={[
+                        styles.cardName,
+                        selectedLanguage.code === language.code && styles.selectedCardText
+                      ]}>
+                        {language.nativeName}
+                      </Text>
+                      <Text style={[
+                        styles.cardCode,
+                        selectedLanguage.code === language.code && styles.selectedCardSubtext
+                      ]}>
+                        {language.name}
+                      </Text>
                     </View>
-                    {selectedLanguage.code === language.code && (
-                      <Check size={20} color="#4CAF50" />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
+                  </View>
+                  {selectedLanguage.code === language.code && (
+                    <View style={styles.checkContainer}>
+                      <Check size={24} color="#4CAF50" />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : (
+            // Desktop: Dropdown View
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setIsDropdownOpen(!isDropdownOpen)}
+              >
+                <View style={styles.dropdownContent}>
+                  <Text style={styles.flagText}>{selectedLanguage.flag}</Text>
+                  <View style={styles.languageInfo}>
+                    <Text style={styles.languageName}>{selectedLanguage.nativeName}</Text>
+                    <Text style={styles.languageCode}>{selectedLanguage.name}</Text>
+                  </View>
+                </View>
+                <ChevronDown 
+                  size={20} 
+                  color="#666" 
+                  style={[
+                    styles.chevron,
+                    isDropdownOpen && styles.chevronRotated
+                  ]} 
+                />
+              </TouchableOpacity>
+
+              {/* Dropdown Options */}
+              {isDropdownOpen && (
+                <View style={styles.dropdownOptions}>
+                  {languages.map((language) => (
+                    <TouchableOpacity
+                      key={language.code}
+                      style={[
+                        styles.dropdownOption,
+                        selectedLanguage.code === language.code && styles.selectedOption
+                      ]}
+                      onPress={() => handleLanguageSelect(language)}
+                    >
+                      <View style={styles.optionContent}>
+                        <Text style={styles.optionFlag}>{language.flag}</Text>
+                        <View style={styles.optionInfo}>
+                          <Text style={[
+                            styles.optionName,
+                            selectedLanguage.code === language.code && styles.selectedOptionText
+                          ]}>
+                            {language.nativeName}
+                          </Text>
+                          <Text style={[
+                            styles.optionCode,
+                            selectedLanguage.code === language.code && styles.selectedOptionText
+                          ]}>
+                            {language.name}
+                          </Text>
+                        </View>
+                      </View>
+                      {selectedLanguage.code === language.code && (
+                        <Check size={20} color="#4CAF50" />
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         <View style={styles.continueSection}>
@@ -271,6 +314,62 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginBottom: 20,
   },
+  // Mobile: Card List Styles
+  languageCardsContainer: {
+    gap: 12,
+  },
+  languageCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+  },
+  selectedCard: {
+    borderColor: '#4CAF50',
+    backgroundColor: 'rgba(76, 175, 80, 0.05)',
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  cardFlag: {
+    fontSize: 32,
+    marginRight: 16,
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  cardName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  cardCode: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  selectedCardText: {
+    color: '#4CAF50',
+    fontWeight: '700',
+  },
+  selectedCardSubtext: {
+    color: '#2E7D32',
+  },
+  checkContainer: {
+    marginLeft: 12,
+  },
+  // Desktop: Dropdown Styles
   dropdownContainer: {
     position: 'relative',
     zIndex: 1000,

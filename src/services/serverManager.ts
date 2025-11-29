@@ -140,8 +140,25 @@ class ServerManager {
    * Discover Ollama server
    */
   private async discoverOllama(): Promise<ServerEndpoint | null> {
+    // Check environment variable first for mobile/production use
+    const envUrl = process.env.EXPO_PUBLIC_OLLAMA_SERVER;
+    
+    if (envUrl && !envUrl.includes('localhost')) {
+      // User has configured a specific URL (e.g., ngrok tunnel for mobile access)
+      const endpoint = {
+        url: envUrl,
+        type: 'configured' as const,
+        available: true,
+        lastChecked: Date.now()
+      };
+      
+      this.config.ollama = endpoint;
+      console.debug('[ServerManager] Using configured Ollama (mobile-ready)', endpoint.url);
+      return endpoint;
+    }
+    
     try {
-      // Try auto-discovery first
+      // Try auto-discovery for local development
       const discovered = await discoverServerCached('ollama');
       
       if (discovered && discovered.reachable) {
@@ -160,22 +177,21 @@ class ServerManager {
       console.debug('[ServerManager] Ollama discovery failed', error);
     }
 
-    // Fallback to environment variable (if set)
-    const envUrl = process.env.EXPO_PUBLIC_OLLAMA_SERVER;
+    // Fallback to localhost only if configured
     if (envUrl) {
       const endpoint = {
         url: envUrl,
         type: 'configured' as const,
-        available: false, // Unknown until tested
+        available: false,
         lastChecked: Date.now()
       };
       
       this.config.ollama = endpoint;
-      console.debug('[ServerManager] Using configured Ollama', endpoint.url);
+      console.debug('[ServerManager] Using localhost Ollama (desktop only)', endpoint.url);
       return endpoint;
     }
 
-    console.debug('[ServerManager] Ollama not available');
+    console.debug('[ServerManager] Ollama not available - will use cloud LLM fallback');
     this.config.ollama = null;
     return null;
   }
@@ -184,8 +200,27 @@ class ServerManager {
    * Discover backend server
    */
   private async discoverBackend(): Promise<ServerEndpoint | null> {
+    // Check environment variables first for mobile/production use
+    const overrideUrl = process.env.EXPO_PUBLIC_BACKEND_OVERRIDE;
+    const envUrl = overrideUrl || process.env.EXPO_PUBLIC_BACKEND_URL;
+    
+    if (envUrl && !envUrl.includes('localhost')) {
+      // User has configured a specific URL (e.g., ngrok, cloud, or LAN IP)
+      const endpoint = {
+        url: envUrl,
+        type: 'configured' as const,
+        available: true,
+        lastChecked: Date.now()
+      };
+      
+      this.config.backend = endpoint;
+      this.config.tts = endpoint;
+      console.debug('[ServerManager] Using configured backend (mobile-ready)', endpoint.url);
+      return endpoint;
+    }
+    
     try {
-      // Try auto-discovery first
+      // Try auto-discovery for local development
       const discovered = await discoverServerCached('backend');
       
       if (discovered && discovered.reachable) {
@@ -205,10 +240,7 @@ class ServerManager {
       console.debug('[ServerManager] Backend discovery failed', error);
     }
 
-    // Fallback to environment variable
-    // Explicit override takes precedence (user intentionally set an IP)
-    const overrideUrl = process.env.EXPO_PUBLIC_BACKEND_OVERRIDE;
-    const envUrl = overrideUrl || process.env.EXPO_PUBLIC_BACKEND_URL;
+    // Fallback to localhost only if no other option
     if (envUrl) {
       const endpoint = {
         url: envUrl,
@@ -219,11 +251,11 @@ class ServerManager {
       
       this.config.backend = endpoint;
       this.config.tts = endpoint;
-      console.debug('[ServerManager] Using configured backend', endpoint.url);
+      console.debug('[ServerManager] Using localhost backend (desktop only)', endpoint.url);
       return endpoint;
     }
 
-    console.debug('[ServerManager] Backend not available');
+    console.warn('[ServerManager] Backend not available - set EXPO_PUBLIC_BACKEND_URL for mobile');
     this.config.backend = null;
     return null;
   }

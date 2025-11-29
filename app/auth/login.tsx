@@ -12,6 +12,7 @@ import {
   Animated,
   Easing,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -23,6 +24,8 @@ import { router } from 'expo-router';
 
 export default function LoginScreen() {
   const { t, i18n } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768; // Consider screens narrower than 768px as mobile
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [showOtpField, setShowOtpField] = useState(false);
@@ -331,8 +334,8 @@ export default function LoginScreen() {
                 {/* Email Input with Send OTP Button */}
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>EMAIL</Text>
-                  <View style={styles.phoneInputRow}>
-                    <View style={styles.phoneInputContainer}>
+                  <View style={isMobile ? styles.phoneInputColumn : styles.phoneInputRow}>
+                    <View style={isMobile ? styles.phoneInputContainerFullWidth : styles.phoneInputContainer}>
                       <View style={styles.inputIconContainer}>
                         <User size={20} color="#4CAF50" />
                       </View>
@@ -349,7 +352,7 @@ export default function LoginScreen() {
                     </View>
                     <TouchableOpacity 
                       style={[
-                        styles.otpButton,
+                        isMobile ? styles.otpButtonFullWidth : styles.otpButton,
                         (otpLoading || !email || !email.includes('@')) && styles.otpButtonDisabled
                       ]}
                       onPress={handleSendOtp}
@@ -591,8 +594,31 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'flex-end',
   },
+  phoneInputColumn: {
+    flexDirection: 'column',
+    gap: 12,
+    width: '100%',
+  },
   phoneInputContainer: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  phoneInputContainerFullWidth: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -645,6 +671,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 120,
+    shadowColor: '#2E7D32',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  otpButtonFullWidth: {
+    backgroundColor: '#2E7D32',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
     shadowColor: '#2E7D32',
     shadowOffset: {
       width: 0,

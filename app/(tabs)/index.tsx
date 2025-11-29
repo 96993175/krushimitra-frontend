@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Modal, Animated, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, Modal, Animated, Alert, Platform, useWindowDimensions } from 'react-native';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'expo-router';
@@ -71,6 +71,8 @@ const MAX_REQUESTS_PER_WINDOW = 10;
 
 export default function HomeScreen() {
   const { t } = useTranslation();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
   const [userData, setUserData] = useState<any>(null);
   const [weather, setWeather] = useState('🌤️ Partly cloudy, 28°C');
   const [weatherData, setWeatherData] = useState<any>(null);
@@ -855,10 +857,22 @@ export default function HomeScreen() {
         }
       }
       
-      const response = await fetch(`http://localhost:3001/weather?lat=${lat}&lon=${lon}`);
+      // Use serverManager to get backend URL (works on both desktop and mobile)
+      await serverManager.initialize();
+      const backendUrl = serverManager.getBackendEndpoint() || 'http://localhost:3001';
+      
+      const weatherUrl = `${backendUrl}/weather?lat=${lat}&lon=${lon}`;
+      console.log('Fetching weather from:', weatherUrl);
+      
+      const response = await fetch(weatherUrl, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'User-Agent': 'KrushiMitra-App'
+        }
+      });
       
       if (!response.ok) {
-        throw new Error('Weather API request failed');
+        throw new Error(`Weather API request failed: ${response.status}`);
       }
       
       const result = await response.json();
@@ -1700,10 +1714,12 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.appTitle}>{t('homeScreen.appTitle')}</Text>
+            <Text style={styles.appTitle} numberOfLines={1}>{t('homeScreen.appTitle')}</Text>
             <View style={styles.locationRow}>
               <MapPin size={14} color="#6B7280" />
-              <Text style={styles.locationText}>{t('homeScreen.location')}</Text>
+              <Text style={styles.headerLocationText} numberOfLines={1} ellipsizeMode="tail">
+                {t('homeScreen.location')}
+              </Text>
             </View>
           </View>
 
@@ -1990,7 +2006,9 @@ export default function HomeScreen() {
                   <View style={styles.locationIconWrapper}>
                     <MapPin size={16} color="#4CAF50" />
                   </View>
-                  <Text style={styles.locationText}>{userAddress}</Text>
+                  <Text style={styles.locationText} numberOfLines={1} ellipsizeMode="tail">
+                    {userAddress}
+                  </Text>
                 </View>
                 <View style={styles.timeContainer}>
                   <Text style={styles.updateTime}>
@@ -2113,7 +2131,11 @@ export default function HomeScreen() {
                   <Text style={[styles.forecastBadgeText, { color: '#4CAF50' }]}>WEEK</Text>
                 </View>
               </View>
-              <View style={styles.forecastGrid}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.forecastGrid}
+              >
                 {Array.from({ length: 7 }).map((_, index) => {
                   // Get forecast data for this day or use fallback
                   const day = weeklyForecast[index] || {
@@ -2178,7 +2200,7 @@ export default function HomeScreen() {
                     </View>
                   );
                 })}
-              </View>
+              </ScrollView>
             </LinearGradient>
           </Animated.View>
         </View>
@@ -2403,7 +2425,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
   },
   // Top Navigation Styles
   topNavigation: {
@@ -2430,10 +2452,11 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 8,
+    maxWidth: '60%',
   },
   appTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
     marginBottom: 2,
@@ -2442,6 +2465,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    maxWidth: '100%',
+  },
+  headerLocationText: {
+    fontSize: 12,
+    color: '#6B7280',
+    flexShrink: 1,
   },
   notificationContainer: {
     position: 'relative',
@@ -3429,7 +3458,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   weatherCardGradient: {
-    padding: 24,
+    padding: 16,
     borderRadius: 20,
   },
   currentWeatherHeader: {
@@ -3437,11 +3466,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    maxWidth: '70%',
   },
   locationIconWrapper: {
     width: 28,
@@ -3450,11 +3483,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 178, 0, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   locationText: {
     fontSize: 16,
     color: '#333',
     fontWeight: '600',
+    flexShrink: 1,
+    numberOfLines: 1,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -3481,12 +3517,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 16,
   },
   tempSection: {
     flex: 1,
   },
   currentTemp: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: '800',
     color: '#333',
     marginBottom: 12,
@@ -3516,10 +3554,11 @@ const styles = StyleSheet.create({
   },
   miniStatsContainer: {
     flex: 1,
-    paddingLeft: 20,
+    paddingLeft: 0,
+    minWidth: '100%',
   },
   miniStatsGrid: {
-    gap: 16,
+    gap: 12,
   },
   miniStat: {
     flexDirection: 'row',
@@ -3559,7 +3598,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   forecastCardGradient: {
-    padding: 24,
+    padding: 16,
     borderRadius: 20,
   },
   forecastHeader: {
@@ -3586,15 +3625,15 @@ const styles = StyleSheet.create({
   },
   forecastGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 8,
+    paddingRight: 8,
   },
   dailyForecastCard: {
     backgroundColor: '#F8F9FA',
     borderRadius: 16,
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
-    flex: 1,
+    width: 80,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
@@ -3609,10 +3648,10 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
   },
   dayName: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#777',
     fontWeight: '600',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   todayText: {
     color: '#FFB200',
@@ -3622,9 +3661,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   dayIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(119, 119, 119, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
