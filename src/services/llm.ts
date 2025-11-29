@@ -93,15 +93,13 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
   // Build simplified prompt with only user name
   const systemPrompt = `You are KrushiAI, a simple farming assistant.
 Reply only in easy Hindi (Devanagari) and always take username in answer
-User name = ${userName}
+Username = ${userName}
 
 Answer the user's question in a helpful and friendly manner.`;
   
   const userMessage = `--- USER QUESTION ---
 ${prompt}
------------------------
-
-Your Answer (in Hindi):`;
+-----------------------`;
   
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
