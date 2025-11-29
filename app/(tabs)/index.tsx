@@ -1566,47 +1566,17 @@ export default function HomeScreen() {
       try {
         let finalResponse = '';
 
-        // Fetch user context to provide to LLM
-        let userContextForLLM = null;
-        try {
-          const contextSnapshot = await fetchUserContextSnapshot();
-          if (contextSnapshot) {
-            // Format context in the same structure as backend
-            userContextForLLM = {
-              query: text,
-              user_data: {
-                user_name: contextSnapshot.userData?.name || 'Unknown',
-                user_email: contextSnapshot.userData?.email || 'Not provided',
-                user_phone: contextSnapshot.userData?.phone || 'Not provided',
-                user_language: contextSnapshot.userData?.language || language,
-                user_location: contextSnapshot.userData?.location ? {
-                  address: contextSnapshot.userData.location.address,
-                  latitude: contextSnapshot.userData.location.latitude,
-                  longitude: contextSnapshot.userData.location.longitude
-                } : null,
-                user_weather: contextSnapshot.userData?.weather ? {
-                  temperature: contextSnapshot.userData.weather.temperature,
-                  humidity: contextSnapshot.userData.weather.humidity,
-                  condition: contextSnapshot.userData.weather.condition
-                } : null
-              },
-              last_5_conversations: (contextSnapshot.query || []).map(conv => ({
-                role: conv.role,
-                message: conv.message
-              }))
-            };
-            console.log('📋 User context loaded for AI Orb:', {
-              hasUserData: !!userContextForLLM.user_data,
-              conversationCount: userContextForLLM.last_5_conversations.length
-            });
+        // Use actual user's name from userData
+        const userContextForLLM = {
+          user_data: {
+            user_name: userData?.name || displayName || 'User'
           }
-        } catch (contextError) {
-          console.warn('Could not fetch user context for AI Orb:', contextError);
-        }
+        };
+        console.log('📋 User name loaded for AI Orb:', userContextForLLM.user_data.user_name);
 
         // SEQUENTIAL PROCESSING: Get complete response first, then speak with Niraj voice
         // queryLLMStream automatically chooses cloud or local based on availability
-        // Pass user context to LLM
+        // Pass minimal user context (name only) to LLM
         for await (const chunk of queryLLMStream(text, undefined, userContextForLLM)) {
           finalResponse += chunk;
         }

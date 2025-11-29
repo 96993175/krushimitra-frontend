@@ -87,20 +87,16 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
   
   console.log(`☁️ Using cloud LLM: ${provider}`);
   
-  // Build user context data
-  const userName = userContext?.user_data?.user_name || 'किसान';
-  const userLocation = userContext?.user_data?.user_location?.address || 'अज्ञात स्थान';
-  const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
+  // Only extract user name from context (no fallback to generic term)
+  const userName = userContext?.user_data?.user_name || 'User';
   
-  // Build prompt with the requested format
+  // Build simplified prompt with only user name
   const systemPrompt = `You are KrushiAI, a simple farming assistant.
 Start the answer with the user's name.
 Reply only in easy Hindi (Devanagari).
 User name = ${userName}
-User location = ${userLocation}
-Weather at that location = ${currentWeather}
 
-Use this data to answer the user's question.`;
+Answer the user's question in a helpful and friendly manner.`;
   
   const userMessage = `--- USER QUESTION ---
 ${prompt}
@@ -125,8 +121,7 @@ Your Answer (in Hindi):`;
     model: config.model,
     hasApiKey: !!config.apiKey,
     apiKeyPrefix: config.apiKey?.substring(0, 4),
-    systemPromptLength: systemPrompt.length,
-    userMessageLength: userMessage.length
+    userName: userName
   });
   
   yield* queryCloudLLMStream(messages, config);
@@ -136,20 +131,16 @@ Your Answer (in Hindi):`;
  * Query local Ollama only
  */
 async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerator<string> {
-  // Build user context data
-  const userName = userContext?.user_data?.user_name || 'किसान';
-  const userLocation = userContext?.user_data?.user_location?.address || 'अज्ञात स्थान';
-  const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
+  // Only extract user name from context (no fallback to generic term)
+  const userName = userContext?.user_data?.user_name || 'User';
   
-  // Build prompt with the requested format
+  // Build simplified prompt with only user name
   const fullPrompt = `You are KrushiAI, a simple farming assistant.
 Start the answer with the user's name.
 Reply only in easy Hindi (Devanagari).
 User name = ${userName}
-User location = ${userLocation}
-Weather at that location = ${currentWeather}
 
-Use this data to answer the user's question.
+Answer the user's question in a helpful and friendly manner.
 
 --- USER QUESTION ---
 ${prompt}
@@ -157,7 +148,7 @@ ${prompt}
 
 Your Answer (in Hindi):`;
   
-  console.log('📝 Formatted Prompt:', fullPrompt.substring(0, 200) + '...');
+  console.log('📝 Formatted Prompt for user:', userName);
   yield* queryOllamaStream(fullPrompt);
 }
 
