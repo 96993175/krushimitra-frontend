@@ -266,7 +266,14 @@ class ServerManager {
   getOllamaEndpoint(): string | null {
     if (this.stableCached.ollamaUrl) return this.stableCached.ollamaUrl;
     if (!this.config.ollama) return null;
-    return `${this.config.ollama.url}/api/generate`;
+    
+    // If URL already includes /api/generate (e.g., cloudflare tunnel), don't append it
+    const baseUrl = this.config.ollama.url;
+    if (baseUrl.includes('/api/generate')) {
+      return baseUrl;
+    }
+    
+    return `${baseUrl}/api/generate`;
   }
 
   /**

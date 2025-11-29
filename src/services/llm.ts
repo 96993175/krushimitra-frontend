@@ -94,18 +94,16 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
   
   // Build prompt with the requested format
   const systemPrompt = `You are KrushiAI, a helpful farming assistant.
-
-Below is the user data. Use this data only for answering.
-start replay with users name
 Reply only in simple Hindi (Devanagari script).
+Start your reply with the user's name.
 
 --- USER DATA ---
 Name: ${userName}
 Location: ${userLocation}
 Current Weather: ${currentWeather}
-------------------
-
---- USER QUESTION ---
+------------------`;
+  
+  const userMessage = `--- USER QUESTION ---
 ${prompt}
 ---------------------
 
@@ -113,7 +111,7 @@ Your Answer (in Hindi):`;
   
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: prompt }
+    { role: 'user', content: userMessage }
   ];
   
   const config: CloudLLMConfig = {
