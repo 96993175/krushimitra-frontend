@@ -145,7 +145,7 @@ export default function SignUpScreen() {
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail })
+        body: JSON.stringify({ email: normalizedEmail, isLogin: false })
       });
       
       const data = await response.json();
@@ -155,7 +155,19 @@ export default function SignUpScreen() {
         setShowOtpField(true);
         Alert.alert(t('success'), 'OTP sent to your email! Please check your inbox.');
       } else {
-        Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
+        // Check if user already exists
+        if (response.status === 409 || data.error?.code === 'USER_EXISTS') {
+          Alert.alert(
+            t('error'), 
+            'An account with this email already exists. Please login instead.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Login', onPress: () => router.push('/auth/login') }
+            ]
+          );
+        } else {
+          Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
+        }
       }
     } catch (error) {
       console.error('Error sending OTP:', error);
@@ -195,7 +207,8 @@ export default function SignUpScreen() {
           phone: phoneValue,
           landSize: formData.landSize,
           soilType: formData.soilType,
-          language: i18n.language
+          language: i18n.language,
+          isLogin: false
         })
       });
       
@@ -221,7 +234,19 @@ export default function SignUpScreen() {
       } else {
         setVerifying(false);
         setLoading(false);
-        Alert.alert(t('error'), data.error?.message || 'OTP verification failed');
+        // Check if user already exists
+        if (response.status === 409 || data.error?.code === 'USER_EXISTS') {
+          Alert.alert(
+            t('error'), 
+            'An account with this email already exists. Please login instead.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Login', onPress: () => router.push('/auth/login') }
+            ]
+          );
+        } else {
+          Alert.alert(t('error'), data.error?.message || 'OTP verification failed');
+        }
       }
     } catch (error) {
       console.error('Error verifying OTP:', error);

@@ -152,7 +152,7 @@ export default function LoginScreen() {
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail })
+        body: JSON.stringify({ email: normalizedEmail, isLogin: true })
       });
       
       const data = await response.json();
@@ -161,7 +161,19 @@ export default function LoginScreen() {
         setShowOtpField(true);
         Alert.alert(t('success'), 'OTP sent to your email! Please check your inbox.');
       } else {
-        Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
+        // Check if user doesn't exist
+        if (response.status === 404 || data.error?.code === 'USER_NOT_FOUND') {
+          Alert.alert(
+            t('error'), 
+            'No account found with this email. Please sign up first.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign Up', onPress: handleSignUp }
+            ]
+          );
+        } else {
+          Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
+        }
       }
     } catch (error) {
       console.error('Error sending OTP:', error);
@@ -190,7 +202,7 @@ export default function LoginScreen() {
       const response = await fetch(`${BACKEND_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: normalizedEmail, otp, language: i18n.language })
+        body: JSON.stringify({ email: normalizedEmail, otp, language: i18n.language, isLogin: true })
       });
       
       const data = await response.json();
@@ -212,7 +224,19 @@ export default function LoginScreen() {
         setTransitioning(true);
       } else {
         setLoading(false);
-        Alert.alert(t('error'), data.error?.message || 'Login failed');
+        // Check if user doesn't exist
+        if (response.status === 404 || data.error?.code === 'USER_NOT_FOUND') {
+          Alert.alert(
+            t('error'), 
+            'No account found. Please sign up first.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign Up', onPress: handleSignUp }
+            ]
+          );
+        } else {
+          Alert.alert(t('error'), data.error?.message || 'Login failed');
+        }
       }
     } catch (error) {
       console.error('Error during login:', error);
