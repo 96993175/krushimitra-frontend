@@ -31,6 +31,8 @@ export default function LoginScreen() {
   const [showOtpField, setShowOtpField] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpSentTime, setOtpSentTime] = useState<string | null>(null);
   const fadeAnimation = useRef(new Animated.Value(0)).current;
   const scaleAnimation = useRef(new Animated.Value(0.8)).current;
   const pulseAnimation = useRef(new Animated.Value(1)).current;
@@ -44,6 +46,16 @@ export default function LoginScreen() {
     new Animated.ValueXY({ x: -20, y: 200 }),
     new Animated.ValueXY({ x: 350, y: 300 }),
   ]).current;
+
+  // OTP Timer countdown
+  useEffect(() => {
+    if (otpTimer > 0) {
+      const interval = setInterval(() => {
+        setOtpTimer(prev => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [otpTimer]);
 
   // Initialize animations
   useEffect(() => {
@@ -159,16 +171,23 @@ export default function LoginScreen() {
       
       if (response.ok) {
         setShowOtpField(true);
-        Alert.alert(t('success'), 'OTP sent to your email! Please check your inbox.');
+        setOtpTimer(300); // 5 minutes
+        const now = new Date();
+        setOtpSentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+        Alert.alert(
+          '✅ OTP Sent Successfully',
+          `A 6-digit verification code has been sent to:\n\n${normalizedEmail}\n\nPlease check your inbox and spam folder.\n\nValid for 5 minutes.`,
+          [{ text: 'OK', style: 'default' }]
+        );
       } else {
         // Check if user doesn't exist
         if (response.status === 404 || data.error?.code === 'USER_NOT_FOUND') {
           Alert.alert(
-            t('error'), 
-            'No account found with this email. Please sign up first.',
+            '❌ Account Not Found', 
+            `No account exists for:\n\n${normalizedEmail}\n\nWould you like to create a new account?`,
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Up', onPress: handleSignUp }
+              { text: '✨ Create Account', onPress: handleSignUp }
             ]
           );
         } else {
@@ -227,11 +246,11 @@ export default function LoginScreen() {
         // Check if user doesn't exist
         if (response.status === 404 || data.error?.code === 'USER_NOT_FOUND') {
           Alert.alert(
-            t('error'), 
-            'No account found. Please sign up first.',
+            '❌ Account Not Found', 
+            `No account exists for:\n\n${normalizedEmail}\n\nWould you like to create a new account?`,
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign Up', onPress: handleSignUp }
+              { text: '✨ Create Account', onPress: handleSignUp }
             ]
           );
         } else {
@@ -393,7 +412,12 @@ export default function LoginScreen() {
                 {/* OTP Input */}
                 {showOtpField && (
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>{t('enterOTP')}</Text>
+                    <View style={styles.otpHeader}>
+                      <Text style={styles.inputLabel}>{t('enterOTP')}</Text>
+                      {otpSentTime && (
+                        <Text style={styles.otpSentTime}>Sent at {otpSentTime}</Text>
+                      )}
+                    </View>
                     <View style={styles.inputContainer}>
                       <View style={styles.inputIconContainer}>
                         <Shield size={20} color="#4CAF50" />
@@ -402,13 +426,35 @@ export default function LoginScreen() {
                         style={styles.input}
                         value={otp}
                         onChangeText={setOtp}
-                        placeholder={t('enterOTP')}
+                        placeholder="Enter 6-digit code"
                         placeholderTextColor="#999"
                         keyboardType="numeric"
                         maxLength={6}
                         autoComplete="sms-otp"
                         textContentType="oneTimeCode"
                       />
+                    </View>
+                    
+                    {/* OTP Timer and Resend */}
+                    <View style={styles.otpFooter}>
+                      {otpTimer > 0 ? (
+                        <View style={styles.timerContainer}>
+                          <Text style={styles.timerText}>
+                            ⏱️ Code expires in {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, '0')}
+                          </Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity 
+                          style={styles.resendButton}
+                          onPress={handleSendOtp}
+                          disabled={otpLoading}
+                        >
+                          <Text style={styles.resendText}>
+                            {otpLoading ? 'Sending...' : '🔄 Resend OTP'}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <Text style={styles.otpHint}>Check spam folder if not received</Text>
                     </View>
                   </View>
                 )}
@@ -729,6 +775,61 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  
+  // OTP Enhancement Styles
+  otpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  otpSentTime: {
+    fontSize: 11,
+    color: '#4CAF50',
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  otpFooter: {
+    marginTop: 12,
+    gap: 8,
+  },
+  timerContainer: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  timerText: {
+    fontSize: 13,
+    color: '#2E7D32',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  resendButton: {
+    backgroundColor: '#F1F8E9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C5E1A5',
+    alignItems: 'center',
+  },
+  resendText: {
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  otpHint: {
+    fontSize: 11,
+    color: '#757575',
+    textAlign: 'center',
+    fontStyle: 'italic',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   

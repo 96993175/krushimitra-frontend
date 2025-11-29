@@ -39,8 +39,20 @@ export default function SignUpScreen() {
   const [transitioning, setTransitioning] = useState(false);
   const otpInputRef = useRef<TextInput | null>(null);
   const [otpStatus, setOtpStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpSentTime, setOtpSentTime] = useState<string | null>(null);
   const [otpFeedback, setOtpFeedback] = useState<string | null>(null);
   const otpValidationTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // OTP Timer countdown
+  useEffect(() => {
+    if (otpTimer > 0) {
+      const interval = setInterval(() => {
+        setOtpTimer(prev => prev - 1);
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [otpTimer]);
 
   useEffect(() => {
     if (showOtpField) {
@@ -153,16 +165,23 @@ export default function SignUpScreen() {
       if (response.ok) {
         setFormData(prev => ({ ...prev, otp: '' }));
         setShowOtpField(true);
-        Alert.alert(t('success'), 'OTP sent to your email! Please check your inbox.');
+        setOtpTimer(300); // 5 minutes
+        const now = new Date();
+        setOtpSentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+        Alert.alert(
+          '\u2705 OTP Sent Successfully',
+          `A 6-digit verification code has been sent to:\\n\\n${normalizedEmail}\\n\\nPlease check your inbox and spam folder.\\n\\nValid for 5 minutes.`,
+          [{ text: 'OK', style: 'default' }]
+        );
       } else {
         // Check if user already exists
         if (response.status === 409 || data.error?.code === 'USER_EXISTS') {
           Alert.alert(
-            t('error'), 
-            'An account with this email already exists. Please login instead.',
+            '\u26a0\ufe0f Account Already Exists', 
+            `An account is already registered with:\\n\\n${normalizedEmail}\\n\\nWould you like to login instead?`,
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Login', onPress: () => router.push('/auth/login') }
+              { text: '\ud83d\udd11 Login', onPress: () => router.push('/auth/login') }
             ]
           );
         } else {
@@ -237,11 +256,11 @@ export default function SignUpScreen() {
         // Check if user already exists
         if (response.status === 409 || data.error?.code === 'USER_EXISTS') {
           Alert.alert(
-            t('error'), 
-            'An account with this email already exists. Please login instead.',
+            '\u26a0\ufe0f Account Already Exists', 
+            `An account is already registered with:\\n\\n${normalizedEmail}\\n\\nWould you like to login instead?`,
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Login', onPress: () => router.push('/auth/login') }
+              { text: '\ud83d\udd11 Login', onPress: () => router.push('/auth/login') }
             ]
           );
         } else {
@@ -458,7 +477,12 @@ export default function SignUpScreen() {
               {/* OTP Field */}
               {showOtpField && (
                 <View style={styles.inputGroup}>
-                  <Text style={styles.inputLabel}>{t('enterOTP').toUpperCase()} *</Text>
+                  <View style={styles.otpHeader}>
+                    <Text style={styles.inputLabel}>{t('enterOTP').toUpperCase()} *</Text>
+                    {otpSentTime && (
+                      <Text style={styles.otpSentTime}>Sent at {otpSentTime}</Text>
+                    )}
+                  </View>
                   <View style={[
                     styles.inputContainer,
                     focusedField === 'otp' && styles.inputContainerFocused,
@@ -470,7 +494,7 @@ export default function SignUpScreen() {
                     </View>
                     <TextInput
                       style={styles.input}
-                      placeholder={t('enterOTP')}
+                      placeholder="Enter 6-digit code"
                       placeholderTextColor="#999"
                       value={formData.otp}
                       onChangeText={handleOtpInputChange}
@@ -483,16 +507,39 @@ export default function SignUpScreen() {
                       ref={otpInputRef}
                     />
                   </View>
-                  <Text style={styles.helperText}>Enter the 6-digit code sent to your email</Text>
+                  
+                  {/* OTP Status Messages */}
                   {otpStatus === 'valid' && (
-                    <Text style={styles.otpStatusSuccess}>{otpFeedback || 'OTP verified successfully.'}</Text>
+                    <Text style={styles.otpStatusSuccess}>✓ {otpFeedback || 'OTP verified successfully.'}</Text>
                   )}
                   {otpStatus === 'invalid' && otpFeedback && (
-                    <Text style={styles.otpStatusError}>{otpFeedback}</Text>
+                    <Text style={styles.otpStatusError}>✗ {otpFeedback}</Text>
                   )}
                   {otpStatus === 'checking' && (
-                    <Text style={styles.otpStatusChecking}>{t('loading')}</Text>
+                    <Text style={styles.otpStatusChecking}>⏳ {t('loading')}</Text>
                   )}
+                  
+                  {/* OTP Timer and Resend */}
+                  <View style={styles.otpFooter}>
+                    {otpTimer > 0 ? (
+                      <View style={styles.timerContainer}>
+                        <Text style={styles.timerText}>
+                          ⏱️ Code expires in {Math.floor(otpTimer / 60)}:{String(otpTimer % 60).padStart(2, '0')}
+                        </Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity 
+                        style={styles.resendButton}
+                        onPress={handleSendOtp}
+                        disabled={otpLoading}
+                      >
+                        <Text style={styles.resendText}>
+                          {otpLoading ? 'Sending...' : '🔄 Resend OTP'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                    <Text style={styles.otpHint}>Check spam folder if not received</Text>
+                  </View>
                 </View>
               )}
               {errorMessage && (
@@ -834,17 +881,74 @@ const styles = StyleSheet.create({
     color: '#2E7D32',
     marginTop: 6,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '600',
   },
   otpStatusError: {
     fontSize: 12,
     color: '#d32f2f',
     marginTop: 6,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+    fontWeight: '600',
   },
   otpStatusChecking: {
     fontSize: 12,
     color: '#757575',
     marginTop: 6,
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  
+  // OTP Enhancement Styles
+  otpHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  otpSentTime: {
+    fontSize: 11,
+    color: '#4CAF50',
+    fontWeight: '500',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  otpFooter: {
+    marginTop: 12,
+    gap: 8,
+  },
+  timerContainer: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A5D6A7',
+  },
+  timerText: {
+    fontSize: 13,
+    color: '#2E7D32',
+    fontWeight: '600',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  resendButton: {
+    backgroundColor: '#F1F8E9',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C5E1A5',
+    alignItems: 'center',
+  },
+  resendText: {
+    fontSize: 14,
+    color: '#2E7D32',
+    fontWeight: '700',
+    fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  otpHint: {
+    fontSize: 11,
+    color: '#757575',
+    textAlign: 'center',
+    fontStyle: 'italic',
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
   },
   
