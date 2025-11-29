@@ -70,7 +70,7 @@ const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10;
 
 export default function HomeScreen() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [userData, setUserData] = useState<any>(null);
@@ -223,22 +223,7 @@ export default function HomeScreen() {
         return null;
       }
       const payload = await response.json();
-      const contextData = payload?.data || payload?.userContext || null;
-      
-      // Log what we received from backend
-      if (contextData) {
-        console.log('🔍 Backend context snapshot:', {
-          hasUserData: !!contextData.userData,
-          userName: contextData.userData?.name,
-          userEmail: contextData.userData?.email,
-          hasLocation: !!contextData.userData?.location,
-          locationAddress: contextData.userData?.location?.address,
-          hasWeather: !!contextData.userData?.weather,
-          weatherCondition: contextData.userData?.weather?.condition
-        });
-      }
-      
-      return contextData;
+      return payload?.data || payload?.userContext || null;
     } catch (error) {
       console.warn('Failed to fetch user context snapshot:', error);
       return null;
@@ -1590,27 +1575,19 @@ export default function HomeScreen() {
             userContextForLLM = {
               query: text,
               user_data: {
-                user_name: contextSnapshot.userData?.name || userData?.name || 'Unknown',
-                user_email: contextSnapshot.userData?.email || userData?.email || 'Not provided',
-                user_phone: contextSnapshot.userData?.phone || userData?.phone || 'Not provided',
-                user_language: contextSnapshot.userData?.language || userData?.language || i18n.language,
+                user_name: contextSnapshot.userData?.name || 'Unknown',
+                user_email: contextSnapshot.userData?.email || 'Not provided',
+                user_phone: contextSnapshot.userData?.phone || 'Not provided',
+                user_language: contextSnapshot.userData?.language || language,
                 user_location: contextSnapshot.userData?.location ? {
                   address: contextSnapshot.userData.location.address,
                   latitude: contextSnapshot.userData.location.latitude,
                   longitude: contextSnapshot.userData.location.longitude
-                } : (userAddress !== 'Location not available' && userAddress !== 'Requesting location permission...' && userAddress) ? {
-                  address: userAddress,
-                  latitude: null,
-                  longitude: null
                 } : null,
                 user_weather: contextSnapshot.userData?.weather ? {
                   temperature: contextSnapshot.userData.weather.temperature,
                   humidity: contextSnapshot.userData.weather.humidity,
                   condition: contextSnapshot.userData.weather.condition
-                } : weatherData ? {
-                  temperature: weatherData.temperature,
-                  humidity: weatherData.humidity,
-                  condition: weatherData.condition
                 } : null
               },
               last_5_conversations: (contextSnapshot.query || []).map(conv => ({
@@ -1620,63 +1597,11 @@ export default function HomeScreen() {
             };
             console.log('📋 User context loaded for AI Orb:', {
               hasUserData: !!userContextForLLM.user_data,
-              conversationCount: userContextForLLM.last_5_conversations.length,
-              userName: userContextForLLM.user_data.user_name,
-              userLocation: userContextForLLM.user_data.user_location?.address,
-              userWeather: userContextForLLM.user_data.user_weather?.condition
-            });
-          } else {
-            // Backend didn't return context, use local data
-            console.log('⚠️ Backend context not available, using local userData');
-            userContextForLLM = {
-              query: text,
-              user_data: {
-                user_name: userData?.name || 'किसान',
-                user_email: userData?.email || 'Not provided',
-                user_phone: userData?.phone || 'Not provided',
-                user_language: userData?.language || i18n.language,
-                user_location: (userAddress && userAddress !== 'Location not available' && userAddress !== 'Requesting location permission...') ? {
-                  address: userAddress,
-                  latitude: null,
-                  longitude: null
-                } : null,
-                user_weather: weatherData ? {
-                  temperature: weatherData.temperature,
-                  humidity: weatherData.humidity,
-                  condition: weatherData.condition
-                } : null
-              },
-              last_5_conversations: []
-            };
-            console.log('📋 Local context created for AI Orb:', {
-              userName: userContextForLLM.user_data.user_name,
-              userLocation: userContextForLLM.user_data.user_location?.address,
-              userWeather: userContextForLLM.user_data.user_weather?.condition
+              conversationCount: userContextForLLM.last_5_conversations.length
             });
           }
         } catch (contextError) {
           console.warn('Could not fetch user context for AI Orb:', contextError);
-          // Fallback to local data on error
-          userContextForLLM = {
-            query: text,
-            user_data: {
-              user_name: userData?.name || 'किसान',
-              user_email: userData?.email || 'Not provided',
-              user_phone: userData?.phone || 'Not provided',
-              user_language: userData?.language || i18n.language,
-              user_location: (userAddress && userAddress !== 'Location not available' && userAddress !== 'Requesting location permission...') ? {
-                address: userAddress,
-                latitude: null,
-                longitude: null
-              } : null,
-              user_weather: weatherData ? {
-                temperature: weatherData.temperature,
-                humidity: weatherData.humidity,
-                condition: weatherData.condition
-              } : null
-            },
-            last_5_conversations: []
-          };
         }
 
         // SEQUENTIAL PROCESSING: Get complete response first, then speak with Niraj voice
