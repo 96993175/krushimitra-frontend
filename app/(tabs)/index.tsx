@@ -621,10 +621,12 @@ export default function HomeScreen() {
 
       if (data) {
         const parsed = JSON.parse(data);
+        console.log('🔍 Loaded userData from AsyncStorage:', JSON.stringify(parsed, null, 2));
         setUserData(parsed);
         const derivedId = normalizeUserId(parsed?.id) || normalizeUserId(parsed?._id) || normalizeUserId(parsed?.userId);
         setSessionUserId(derivedId);
       } else {
+        console.warn('⚠️ No userData found in AsyncStorage');
         setSessionUserId(null);
       }
 

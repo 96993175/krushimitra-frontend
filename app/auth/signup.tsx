@@ -234,8 +234,10 @@ export default function SignUpScreen() {
       const data = await response.json();
       
       if (response.ok) {
+        console.log('🔍 Signup response data:', JSON.stringify(data, null, 2));
         const userPayload = data?.user || data?.data?.user || null;
         const sessionToken = data?.token || data?.session?.token || null;
+        console.log('🔍 userPayload to be saved:', JSON.stringify(userPayload, null, 2));
 
         if (userPayload) {
           await AsyncStorage.setItem('userData', JSON.stringify(userPayload));
