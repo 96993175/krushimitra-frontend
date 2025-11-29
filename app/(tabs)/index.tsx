@@ -70,7 +70,7 @@ const RATE_LIMIT_WINDOW = 60000; // 1 minute
 const MAX_REQUESTS_PER_WINDOW = 10;
 
 export default function HomeScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
   const [userData, setUserData] = useState<any>(null);
@@ -1593,7 +1593,7 @@ export default function HomeScreen() {
                 user_name: contextSnapshot.userData?.name || userData?.name || 'Unknown',
                 user_email: contextSnapshot.userData?.email || userData?.email || 'Not provided',
                 user_phone: contextSnapshot.userData?.phone || userData?.phone || 'Not provided',
-                user_language: contextSnapshot.userData?.language || userData?.language || language,
+                user_language: contextSnapshot.userData?.language || userData?.language || i18n.language,
                 user_location: contextSnapshot.userData?.location ? {
                   address: contextSnapshot.userData.location.address,
                   latitude: contextSnapshot.userData.location.latitude,
@@ -1634,7 +1634,7 @@ export default function HomeScreen() {
                 user_name: userData?.name || 'किसान',
                 user_email: userData?.email || 'Not provided',
                 user_phone: userData?.phone || 'Not provided',
-                user_language: userData?.language || language,
+                user_language: userData?.language || i18n.language,
                 user_location: (userAddress && userAddress !== 'Location not available' && userAddress !== 'Requesting location permission...') ? {
                   address: userAddress,
                   latitude: null,
@@ -1663,7 +1663,7 @@ export default function HomeScreen() {
               user_name: userData?.name || 'किसान',
               user_email: userData?.email || 'Not provided',
               user_phone: userData?.phone || 'Not provided',
-              user_language: userData?.language || language,
+              user_language: userData?.language || i18n.language,
               user_location: (userAddress && userAddress !== 'Location not available' && userAddress !== 'Requesting location permission...') ? {
                 address: userAddress,
                 latitude: null,
