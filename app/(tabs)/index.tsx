@@ -1041,6 +1041,21 @@ export default function HomeScreen() {
     console.log('Open Notifications');
   };
 
+  // Ensure microphone permission is granted before speech recognition
+  const ensureMicPermission = async (): Promise<boolean> => {
+    try {
+      console.log('🎤 Requesting microphone permission...');
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Stop the stream immediately after getting permission
+      stream.getTracks().forEach(track => track.stop());
+      console.log('✅ Microphone permission granted');
+      return true;
+    } catch (err) {
+      console.error('❌ Microphone permission denied:', err);
+      return false;
+    }
+  };
+
   const startListening = () => {
     // Check which voice input mode to use
     if (voiceInputMode === 'whisper' && whisperReady) {
@@ -1103,7 +1118,7 @@ export default function HomeScreen() {
     }
   };
 
-  const startBrowserListening = () => {
+  const startBrowserListening = async () => {
     console.log('🎤 startBrowserListening called:', {
       hasRecognitionRef: !!recognitionRef.current,
       isSpeaking,
@@ -1134,24 +1149,33 @@ export default function HomeScreen() {
       return;
     }
     
-    if (recognitionRef.current) {
-      try {
-        // Request mic permission first to avoid network/audio-capture errors
-        navigator.mediaDevices?.getUserMedia?.({ audio: true })
-          .then(() => {
-            recognitionRef.current.start();
-            setIsListening(true);
-          })
-          .catch((permErr) => {
-            console.error('Microphone permission error:', permErr);
-            Alert.alert('Microphone Access Needed', 'Please allow microphone access to use voice features.');
-          });
-      } catch (error) {
-        console.error('Error starting speech recognition:', error);
-        Alert.alert('Error', 'Could not start voice recognition. Please ensure your browser supports it and you have given microphone permissions.');
-      }
-    } else {
-      Alert.alert('Platform Not Supported', 'Voice recognition is only available on web platform.');
+    if (!recognitionRef.current) {
+      console.error('❌ Recognition not initialized');
+      Alert.alert('Error', 'Voice recognition not ready. Please refresh the page.');
+      return;
+    }
+    
+    // Explicitly request microphone permission first
+    const hasPermission = await ensureMicPermission();
+    if (!hasPermission) {
+      console.error('❌ Microphone permission blocked');
+      Alert.alert(
+        'Microphone Access Needed',
+        'Please allow microphone access to use voice features. Check your browser settings.'
+      );
+      return;
+    }
+
+    try {
+      console.log('▶️ Starting speech recognition...');
+      recognitionRef.current.start();
+      setIsListening(true);
+    } catch (error) {
+      console.error('❌ Error starting speech recognition:', error);
+      Alert.alert(
+        'Error',
+        'Could not start voice recognition. Please try again.'
+      );
     }
   };
 
