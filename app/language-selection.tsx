@@ -113,7 +113,13 @@ export default function LanguageSelectionScreen() {
             <ArrowLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Globe size={24} color="#FFFFFF" />
+            <View style={styles.headerLogoContainer}>
+              <Image 
+                source={require('./logoai.jpg')} 
+                style={styles.headerLogo}
+                resizeMode="contain"
+              />
+            </View>
             <Text style={styles.headerTitle}>{t('selectLanguage')}</Text>
           </View>
           <View style={styles.placeholder} />
@@ -313,6 +319,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  headerLogoContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  headerLogo: {
+    width: 24,
+    height: 24,
   },
   headerTitle: {
     fontSize: 18,
