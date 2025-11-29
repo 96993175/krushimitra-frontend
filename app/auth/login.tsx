@@ -161,6 +161,31 @@ export default function LoginScreen() {
     
     try {
       const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+      
+      // First, check if user exists before sending OTP
+      const checkResponse = await fetch(`${BACKEND_URL}/auth/check-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail })
+      });
+      
+      const checkData = await checkResponse.json();
+      
+      // If user doesn't exist, show error immediately without sending OTP
+      if (!checkResponse.ok || !checkData.exists) {
+        setOtpLoading(false);
+        Alert.alert(
+          '❌ Email Not Registered', 
+          `The email address:\n\n${normalizedEmail}\n\nis not registered with KrushiMitra.\n\nPlease sign up to create a new account.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: '✨ Sign Up', onPress: handleSignUp }
+          ]
+        );
+        return;
+      }
+      
+      // User exists, proceed to send OTP
       const response = await fetch(`${BACKEND_URL}/auth/send-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -180,19 +205,7 @@ export default function LoginScreen() {
           [{ text: 'OK', style: 'default' }]
         );
       } else {
-        // Check if user doesn't exist
-        if (response.status === 404 || data.error?.code === 'USER_NOT_FOUND') {
-          Alert.alert(
-            '❌ Account Not Found', 
-            `No account exists for:\n\n${normalizedEmail}\n\nWould you like to create a new account?`,
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: '✨ Create Account', onPress: handleSignUp }
-            ]
-          );
-        } else {
-          Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
-        }
+        Alert.alert(t('error'), data.error?.message || 'Failed to send OTP');
       }
     } catch (error) {
       console.error('Error sending OTP:', error);
