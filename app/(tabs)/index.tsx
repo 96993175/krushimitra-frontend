@@ -1101,7 +1101,21 @@ export default function HomeScreen() {
       console.warn('Voice capture disabled - system busy (complete response cycle in progress)');
       return;
     }
-    if (Platform.OS === 'web' && recognitionRef.current) {
+    
+    // Check for Web Speech API support (works on mobile browsers too!)
+    const hasWebSpeech = typeof window !== 'undefined' && 
+                        ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+    
+    if (!hasWebSpeech) {
+      console.warn('Web Speech API not available in this browser');
+      Alert.alert(
+        'Feature Not Available', 
+        'Voice recognition requires a browser with Web Speech API support. Try Chrome, Edge, or Safari on your device.'
+      );
+      return;
+    }
+    
+    if (recognitionRef.current) {
       try {
         // Request mic permission first to avoid network/audio-capture errors
         navigator.mediaDevices?.getUserMedia?.({ audio: true })
@@ -1662,6 +1676,22 @@ export default function HomeScreen() {
   };
 
   const toggleVoiceAssistant = () => {
+    // Check if browser supports Web Speech API (works on mobile browsers too!)
+    const hasWebSpeech = typeof window !== 'undefined' && 
+                        ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+    
+    if (!hasWebSpeech) {
+      Alert.alert(
+        'Voice Feature', 
+        'Voice chat requires a browser with Web Speech API support. Try Chrome, Edge, or Safari. You can still use the text chat feature!',
+        [
+          { text: 'OK' },
+          { text: 'Open Chat', onPress: () => router.push('/ai-chat') }
+        ]
+      );
+      return;
+    }
+    
     // Speak welcome message on first interaction (browser autoplay policy requirement)
     if (!hasSpokenWelcome && userData && weatherData && !isSpeaking && !isProcessing) {
       speakWelcomeMessage();

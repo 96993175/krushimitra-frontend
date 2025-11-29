@@ -41,20 +41,36 @@ export async function* queryLLMStream(
   console.log('🤖 LLM Mode:', mode);
   console.log('📋 User Context:', userContext ? 'Included' : 'Not provided');
   
-  // Try cloud first if available
-  if (mode === 'cloud' || mode === 'hybrid') {
+  // Hybrid mode: Try local first, then cloud
+  if (mode === 'hybrid') {
     try {
-      yield* queryCloudOnly(prompt, userContext);
+      console.log('🔄 Trying local Ollama first...');
+      yield* queryLocalOnly(prompt, userContext);
       return;
     } catch (error) {
-      console.warn('☁️ Cloud LLM failed, trying local...', error);
-      if (mode === 'cloud') {
-        throw error; // Don't fallback if cloud-only mode
+      console.warn('⚠️ Local Ollama failed, trying cloud fallback...', error);
+      try {
+        yield* queryCloudOnly(prompt, userContext);
+        return;
+      } catch (cloudError) {
+        console.error('❌ Both local and cloud failed');
+        throw new Error('Both local and cloud LLM failed. Please check your configuration.');
       }
     }
   }
   
-  // Fallback to local
+  // Cloud-only mode
+  if (mode === 'cloud') {
+    try {
+      yield* queryCloudOnly(prompt, userContext);
+      return;
+    } catch (error) {
+      console.error('☁️ Cloud LLM failed:', error);
+      throw error;
+    }
+  }
+  
+  // Local-only mode
   yield* queryLocalOnly(prompt, userContext);
 }
 
@@ -62,12 +78,14 @@ export async function* queryLLMStream(
  * Query cloud LLM only
  */
 async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerator<string> {
-  const apiKey = process.env.EXPO_PUBLIC_CLOUD_LLM_API_KEY;
+  const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY || process.env.EXPO_PUBLIC_CLOUD_LLM_API_KEY;
   const provider = (process.env.EXPO_PUBLIC_CLOUD_LLM_PROVIDER || 'groq') as any;
   
   if (!apiKey) {
-    throw new Error('Cloud LLM API key not configured');
+    throw new Error('Cloud LLM API key not configured. Set EXPO_PUBLIC_GROQ_API_KEY in .env');
   }
+  
+  console.log(`☁️ Using cloud LLM: ${provider}`);
   
   // Build user context data
   const userName = userContext?.user_data?.user_name || 'किसान';
