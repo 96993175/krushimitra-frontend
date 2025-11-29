@@ -117,7 +117,7 @@ Your Answer (in Hindi):`;
     provider,
     apiKey,
     model: process.env.EXPO_PUBLIC_CLOUD_LLM_MODEL || 
-           (provider === 'groq' ? 'llama3-8b-8192' : 'meta-llama/llama-3-8b-instruct')
+           (provider === 'groq' ? 'llama-3.1-8b-instant' : 'meta-llama/llama-3-8b-instruct')
   };
   
   console.log('📤 Sending to cloud LLM:', {

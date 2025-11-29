@@ -23,8 +23,8 @@ const PROVIDER_CONFIGS = {
   groq: {
     baseURL: 'https://api.groq.com/openai/v1',
     models: {
-      llama3: 'llama3-70b-8192',
-      llama3Fast: 'llama3-8b-8192'
+      llama3: 'llama-3.1-70b-versatile',
+      llama3Fast: 'llama-3.1-8b-instant'
     }
   },
   openrouter: {
