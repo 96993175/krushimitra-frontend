@@ -90,7 +90,9 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
   // Build user context data
   const userName = userContext?.user_data?.user_name || 'किसान';
   const userLocation = userContext?.user_data?.user_location?.address || 'अज्ञात स्थान';
-  const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
+  // Weather can be in user_data.user_weather or weather_data.current
+  const weatherInfo = userContext?.user_data?.user_weather || userContext?.weather_data?.current;
+  const currentWeather = weatherInfo?.condition || weatherInfo?.description || 'जानकारी उपलब्ध नहीं';
   
   // Build prompt with the requested format
   const systemPrompt = `You are KrushiAI, a simple farming assistant.
@@ -126,7 +128,13 @@ Your Answer (in Hindi):`;
     hasApiKey: !!config.apiKey,
     apiKeyPrefix: config.apiKey?.substring(0, 4),
     systemPromptLength: systemPrompt.length,
-    userMessageLength: userMessage.length
+    userMessageLength: userMessage.length,
+    contextData: {
+      userName,
+      userLocation,
+      currentWeather,
+      hasUserContext: !!userContext
+    }
   });
   
   yield* queryCloudLLMStream(messages, config);
@@ -139,7 +147,9 @@ async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerato
   // Build user context data
   const userName = userContext?.user_data?.user_name || 'किसान';
   const userLocation = userContext?.user_data?.user_location?.address || 'अज्ञात स्थान';
-  const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
+  // Weather can be in user_data.user_weather or weather_data.current
+  const weatherInfo = userContext?.user_data?.user_weather || userContext?.weather_data?.current;
+  const currentWeather = weatherInfo?.condition || weatherInfo?.description || 'जानकारी उपलब्ध नहीं';
   
   // Build prompt with the requested format
   const fullPrompt = `You are KrushiAI, a simple farming assistant.
@@ -158,6 +168,7 @@ ${prompt}
 Your Answer (in Hindi):`;
   
   console.log('📝 Formatted Prompt:', fullPrompt.substring(0, 200) + '...');
+  console.log('📋 Context Data:', { userName, userLocation, currentWeather, hasUserContext: !!userContext });
   yield* queryOllamaStream(fullPrompt);
 }
 
