@@ -1607,10 +1607,10 @@ export default function HomeScreen() {
                   temperature: contextSnapshot.userData.weather.temperature,
                   humidity: contextSnapshot.userData.weather.humidity,
                   condition: contextSnapshot.userData.weather.condition
-                } : weatherDetails ? {
-                  temperature: weatherDetails.temp,
-                  humidity: weatherDetails.humidity,
-                  condition: weatherDetails.description
+                } : weatherData ? {
+                  temperature: weatherData.temperature,
+                  humidity: weatherData.humidity,
+                  condition: weatherData.condition
                 } : null
               },
               last_5_conversations: (contextSnapshot.query || []).map(conv => ({
@@ -1640,10 +1640,10 @@ export default function HomeScreen() {
                   latitude: null,
                   longitude: null
                 } : null,
-                user_weather: weatherDetails ? {
-                  temperature: weatherDetails.temp,
-                  humidity: weatherDetails.humidity,
-                  condition: weatherDetails.description
+                user_weather: weatherData ? {
+                  temperature: weatherData.temperature,
+                  humidity: weatherData.humidity,
+                  condition: weatherData.condition
                 } : null
               },
               last_5_conversations: []
@@ -1669,10 +1669,10 @@ export default function HomeScreen() {
                 latitude: null,
                 longitude: null
               } : null,
-              user_weather: weatherDetails ? {
-                temperature: weatherDetails.temp,
-                humidity: weatherDetails.humidity,
-                condition: weatherDetails.description
+              user_weather: weatherData ? {
+                temperature: weatherData.temperature,
+                humidity: weatherData.humidity,
+                condition: weatherData.condition
               } : null
             },
             last_5_conversations: []
