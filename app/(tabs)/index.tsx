@@ -1566,13 +1566,22 @@ export default function HomeScreen() {
       try {
         let finalResponse = '';
 
-        // Use actual user's name from userData
+        // Use actual user's name from userData - check multiple possible fields
+        const actualUserName = userData?.name || 
+                              userData?.farmerName || 
+                              userData?.profile?.name || 
+                              (userData?.email ? userData.email.split('@')[0] : null);
+        
         const userContextForLLM = {
           user_data: {
-            user_name: userData?.name || displayName || 'User'
+            user_name: actualUserName || 'User'
           }
         };
         console.log('📋 User name loaded for AI Orb:', userContextForLLM.user_data.user_name);
+        console.log('🔍 Debug - userData:', userData);
+        console.log('🔍 Debug - userData.name:', userData?.name);
+        console.log('🔍 Debug - userData.farmerName:', userData?.farmerName);
+        console.log('🔍 Debug - displayName:', displayName);
 
         // SEQUENTIAL PROCESSING: Get complete response first, then speak with Niraj voice
         // queryLLMStream automatically chooses cloud or local based on availability
