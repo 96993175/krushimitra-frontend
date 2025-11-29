@@ -93,19 +93,18 @@ async function* queryCloudOnly(prompt: string, userContext?: any): AsyncGenerato
   const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
   
   // Build prompt with the requested format
-  const systemPrompt = `You are KrushiAI, a helpful farming assistant.
-Reply only in simple Hindi (Devanagari script).
-Start your reply with the user's name.
+  const systemPrompt = `You are KrushiAI, a simple farming assistant.
+Start the answer with the user's name.
+Reply only in easy Hindi (Devanagari).
+User name = ${userName}
+User location = ${userLocation}
+Weather at that location = ${currentWeather}
 
---- USER DATA ---
-Name: ${userName}
-Location: ${userLocation}
-Current Weather: ${currentWeather}
-------------------`;
+Use this data to answer the user's question.`;
   
   const userMessage = `--- USER QUESTION ---
 ${prompt}
----------------------
+-----------------------
 
 Your Answer (in Hindi):`;
   
@@ -121,6 +120,15 @@ Your Answer (in Hindi):`;
            (provider === 'groq' ? 'llama3-8b-8192' : 'meta-llama/llama-3-8b-instruct')
   };
   
+  console.log('📤 Sending to cloud LLM:', {
+    provider: config.provider,
+    model: config.model,
+    hasApiKey: !!config.apiKey,
+    apiKeyPrefix: config.apiKey?.substring(0, 4),
+    systemPromptLength: systemPrompt.length,
+    userMessageLength: userMessage.length
+  });
+  
   yield* queryCloudLLMStream(messages, config);
 }
 
@@ -134,21 +142,18 @@ async function* queryLocalOnly(prompt: string, userContext?: any): AsyncGenerato
   const currentWeather = userContext?.weather_data?.current?.description || 'जानकारी उपलब्ध नहीं';
   
   // Build prompt with the requested format
-  const fullPrompt = `You are KrushiAI, a helpful farming assistant.
+  const fullPrompt = `You are KrushiAI, a simple farming assistant.
+Start the answer with the user's name.
+Reply only in easy Hindi (Devanagari).
+User name = ${userName}
+User location = ${userLocation}
+Weather at that location = ${currentWeather}
 
-Below is the user data. Use this data only for answering.
-start replay with users name
-Reply only in simple Hindi (Devanagari script).
-
---- USER DATA ---
-Name: ${userName}
-Location: ${userLocation}
-Current Weather: ${currentWeather}
-------------------
+Use this data to answer the user's question.
 
 --- USER QUESTION ---
 ${prompt}
----------------------
+-----------------------
 
 Your Answer (in Hindi):`;
   

@@ -347,13 +347,15 @@ export default function HomeScreen() {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
       if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        // Use a valid BCP-47 language tag; voice selection is for TTS, not STT
-        recognitionRef.current.lang = 'en-IN';
+        console.log('✅ Initializing Web Speech Recognition...');
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-IN';
+        
+        // Attach ALL event handlers HERE - this ensures they work on mobile browsers too
 
-        recognitionRef.current.onresult = (event: any) => {
+        recognition.onresult = (event: any) => {
           // SEQUENTIAL VOICE PROCESSING: Only accept input when completely ready
           // STOP listening immediately when system is busy to prevent audio capture
           if (isSpeaking || isProcessing) {
@@ -388,7 +390,7 @@ export default function HomeScreen() {
           }, 500);
         };
 
-        recognitionRef.current.onerror = (event: any) => {
+        recognition.onerror = (event: any) => {
           console.error('Speech recognition error', event.error);
           setIsListening(false);
           // Attempt a gentle auto-retry on transient errors ONLY when system is not busy
@@ -406,11 +408,21 @@ export default function HomeScreen() {
           }
         };
 
-        recognitionRef.current.onend = () => {
+        recognition.onend = () => {
+          console.log('🛑 Recognition ended');
           setIsListening(false);
         };
+        
+        recognition.onstart = () => {
+          console.log('🎧 Recognition started');
+          setIsListening(true);
+        };
+        
+        // NOW assign to ref after all handlers are attached
+        recognitionRef.current = recognition;
+        console.log('✅ Speech recognition initialized with all event handlers');
       } else {
-        console.warn('Speech recognition not supported in this browser');
+        console.warn('❌ Speech recognition not supported in this browser');
       }
     } else {
       console.warn('Speech recognition only available on web platform');
@@ -1708,21 +1720,11 @@ export default function HomeScreen() {
       return;
     }
     
-    // If recognition not initialized yet, try to initialize it
+    // Check if recognition was initialized in useEffect
     if (!recognitionRef.current) {
-      console.warn('⚠️ Recognition not initialized, attempting to initialize...');
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
-        recognitionRef.current.lang = 'en-IN';
-        console.log('✅ Recognition initialized successfully');
-      } else {
-        console.error('❌ Failed to initialize speech recognition');
-        Alert.alert('Error', 'Could not initialize voice recognition. Please refresh the page.');
-        return;
-      }
+      console.error('❌ Recognition not initialized - this should not happen!');
+      Alert.alert('Error', 'Voice recognition not ready. Please refresh the page.');
+      return;
     }
     
     // Speak welcome message on first interaction (browser autoplay policy requirement)

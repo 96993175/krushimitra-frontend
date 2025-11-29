@@ -76,7 +76,16 @@ export async function* queryCloudLLMStream(
     });
     
     if (!response.ok || !response.body) {
-      throw new Error(`${config.provider} request failed: ${response.status}`);
+      // Get error details from response
+      let errorDetails = `${response.status} ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        console.error(`${config.provider} error response:`, errorBody);
+        errorDetails += ` - ${errorBody}`;
+      } catch (e) {
+        // Ignore if can't read error body
+      }
+      throw new Error(`${config.provider} request failed: ${errorDetails}`);
     }
     
     const reader = response.body.getReader();
